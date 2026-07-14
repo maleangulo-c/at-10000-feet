@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 
 # ===========================================================================
 # 4. DATA — Questions
@@ -362,6 +363,37 @@ def init_state() -> None:
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
+def scroll_to_top() -> None:
+    """Scroll the parent page to the top.
+
+    Streamlit keeps the scroll position across reruns, so after a screen change
+    (notably on mobile) the user can land at the bottom of the new page. This
+    injects a tiny script into the app iframe that scrolls its parent window.
+    """
+    components.html(
+        """
+        <script>
+            const doc = window.parent.document;
+            const selectors = [
+                'section.stMain', 'section.main',
+                '.stMainBlockContainer',
+                'div[data-testid="stAppViewContainer"]',
+            ];
+            const jump = () => {
+                for (const s of selectors) {
+                    const el = doc.querySelector(s);
+                    if (el) { el.scrollTo(0, 0); }
+                }
+                window.parent.scrollTo(0, 0);
+            };
+            jump();
+            setTimeout(jump, 50);
+        </script>
+        """,
+        height=0,
+    )
+
+
 # ===========================================================================
 # SCREEN 1 — Welcome + participant info
 # ===========================================================================
@@ -489,6 +521,7 @@ def render_questions() -> None:
         if st.button("Calculate My Score", type="primary", disabled=not can_calc):
             persist_submission(st.session_state["profile"], st.session_state["answers"])
             st.session_state["screen"] = "results"
+            st.session_state["scroll_top"] = True
             st.rerun()
 
     if not can_calc:
@@ -760,6 +793,10 @@ def render_recommendations_tab(answers: dict) -> None:
 
 
 def render_results() -> None:
+    # Jump to the top once, right after arriving from the questionnaire.
+    if st.session_state.pop("scroll_top", False):
+        scroll_to_top()
+
     answers = st.session_state["answers"]
     profile = st.session_state["profile"]
     total = sum(sum(answers[p]) for p in PILLARS)
