@@ -778,6 +778,28 @@ div[data-testid="stSlider"] div[role="slider"] {{
     height: 26px !important;
     box-shadow: none !important;
 }}
+/* Below ~640px (phones), the 6 level labels can't fit side by side without
+   wrapping past their fixed-height row and overlapping the next card — stack
+   them into a plain vertical list instead of positioning them absolutely. */
+@media (max-width: 640px) {{
+    .pv-row {{
+        position: static !important;
+        height: auto !important;
+        padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+    }}
+    .pv-cell {{
+        position: static !important;
+        width: 100% !important;
+        left: auto !important;
+        right: auto !important;
+        transform: none !important;
+        text-align: left !important;
+        padding: 4px 2px !important;
+    }}
+}}
 </style>
 """
 
@@ -809,13 +831,13 @@ def _pillar_level_labels_html(levels: list[dict]) -> str:
         else:
             pos = f"left:{pct}%; transform:translateX(-50%); text-align:center;"
         cells.append(
-            f'<div style="position:absolute;{pos}top:0;width:{slot}%;padding:6px 4px;box-sizing:border-box;">'
+            f'<div class="pv-cell" style="position:absolute;{pos}top:0;width:{slot}%;padding:6px 4px;box-sizing:border-box;">'
             f'<div style="font-size:0.78rem;color:#888;margin-bottom:2px;">{i}.</div>'
             f'{body}'
             f'</div>'
         )
     return (
-        '<div style="position:relative;height:72px;margin-top:8px;padding:0 9px;box-sizing:border-box;">'
+        '<div class="pv-row" style="position:relative;height:72px;margin-top:8px;padding:0 9px;box-sizing:border-box;">'
         + "".join(cells)
         + '</div>'
     )
