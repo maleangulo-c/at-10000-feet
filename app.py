@@ -36,12 +36,15 @@ PILLAR_ICONS: dict[str, str] = {
 
 # Per-dimension accent colors for the radar chart.
 PILLAR_COLORS: dict[str, str] = {
-    "strategy": "#C1622D",      # terracotta
-    "people": "#C9A227",        # mustard/gold
-    "opex": "#4C7A8C",          # teal blue
-    "connectivity": "#7FA37A",  # sage green
-    "intelligence": "#9B7FBE",  # purple
+    "strategy": "#E91E8C",      # magenta/pink
+    "people": "#1B3B6F",        # navy
+    "opex": "#4CAF50",          # green
+    "connectivity": "#B8CBFA",  # periwinkle
+    "intelligence": "#FFC107",  # gold
 }
+
+# Pale gray "halo" showing the full 0-5 range behind each dimension's wedge.
+RADAR_TRACK_COLOR = "#EFEFEF"
 
 PILLAR_NAMES: dict[str, dict[str, str]] = {
     "en": {
@@ -313,6 +316,9 @@ UI: dict[str, dict[str, str]] = {
             "⚠️ Dev mode: Google Sheets not configured. "
             "Submissions are being written to `{csv}`."
         ),
+        "live_title": "🛫 Live Results — At 10,000 Feet",
+        "live_count": "{count} submissions so far · refreshes automatically",
+        "live_empty": "No submissions yet. This view refreshes automatically as people complete the assessment.",
     },
     "es": {
         "title": "A 10,000 Pies: ¿Qué Tan Listo Estás para la Transición Inteligente?",
@@ -377,6 +383,9 @@ UI: dict[str, dict[str, str]] = {
             "⚠️ Modo desarrollo: Google Sheets no está configurado. "
             "Los envíos se están guardando en `{csv}`."
         ),
+        "live_title": "🛫 Resultados en Vivo — At 10,000 Feet",
+        "live_count": "{count} respuestas hasta ahora · se actualiza automáticamente",
+        "live_empty": "Aún no hay respuestas. Esta vista se actualiza automáticamente conforme la gente completa la evaluación.",
     },
 }
 
@@ -518,6 +527,57 @@ def persist_submission(profile: dict, answers: dict, lang: str) -> None:
             writer.writerow(row)
     except Exception as exc:  # noqa: BLE001
         print(f"[analytics] local CSV fallback failed: {exc}")
+
+
+@st.cache_data(ttl=10, show_spinner=False)
+def _fetch_all_submissions() -> list[dict]:
+    """Fetch every persisted submission row (Google Sheets if configured,
+    else the local CSV fallback) for the live-results aggregate.
+
+    Cached for a short TTL so every simultaneous viewer of the live view
+    shares one read instead of hammering the Sheets API each refresh.
+    """
+    if _has_google_secrets():
+        try:
+            import gspread
+            from google.oauth2.service_account import Credentials
+
+            scopes = [
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive",
+            ]
+            creds = Credentials.from_service_account_info(
+                dict(st.secrets["gcp_service_account"]), scopes=scopes
+            )
+            client = gspread.authorize(creds)
+            spreadsheet = client.open_by_key(st.secrets["sheet_id"])
+            ws = spreadsheet.worksheet("submissions")
+            return ws.get_all_records()
+        except Exception as exc:  # noqa: BLE001
+            print(f"[live] Google Sheets read failed: {exc}")
+            return []
+
+    # Local-dev fallback.
+    if not os.path.exists(LOCAL_CSV):
+        return []
+    with open(LOCAL_CSV, newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def _compute_live_aggregate() -> dict:
+    """Average maturity level per pillar across every submission so far."""
+    rows = _fetch_all_submissions()
+    count = len(rows)
+    if count == 0:
+        return {"count": 0, "averages": {p: 0.0 for p in PILLARS}, "total_avg": 0.0}
+
+    averages = {}
+    for pillar in PILLARS:
+        col = f"{pillar}_level"
+        values = [float(r[col]) for r in rows if str(r.get(col, "")).strip() != ""]
+        averages[pillar] = round(sum(values) / len(values), 1) if values else 0.0
+    total_avg = round(sum(averages.values()), 1)
+    return {"count": count, "averages": averages, "total_avg": total_avg}
 
 
 # ===========================================================================
@@ -677,59 +737,88 @@ def render_motivation() -> None:
 # ===========================================================================
 # SCREEN 2 — Questionnaire
 # ===========================================================================
-# Gradient stops (dark red → red → orange → pale yellow → yellow-green → green),
-# evenly spaced across the 0-5 slider track.
-_SLIDER_GRADIENT = "#B71C1C 0%, #E53935 20%, #FB8C00 40%, #FDD835 60%, #C0CA33 80%, #7CB342 100%"
+# Step-line slider accent — a thin line connecting 6 stops (open circles),
+# with the selected stop shown as a bigger filled circle (the native thumb).
+_SLIDER_ACCENT = "#4A72B5"
+
+# The 5 unselected stops are painted directly onto the native track's own
+# background (as small ring "donuts" at the 0/20/40/60/80/100% points, the
+# same points the thumb travels between) plus a thin connecting line. The
+# selected stop needs no separate drawing — the native thumb already sits
+# exactly on top of it, so it's just styled as the bigger filled circle.
+_DOT = f'radial-gradient(circle closest-side, #FFFFFF 60%, {_SLIDER_ACCENT} 62%, {_SLIDER_ACCENT} 92%, transparent 94%)'
+_TRACK_BG = ",\n        ".join([_DOT] * 6 + [f"linear-gradient({_SLIDER_ACCENT}, {_SLIDER_ACCENT})"])
+_TRACK_POS = "0% 50%, 20% 50%, 40% 50%, 60% 50%, 80% 50%, 100% 50%, center"
+_TRACK_SIZE = "16px 16px, 16px 16px, 16px 16px, 16px 16px, 16px 16px, 16px 16px, 100% 2px"
 
 _SLIDER_CSS = f"""
 <style>
-div[data-testid="stSlider"] {{ padding-top: 2px; }}
+div[data-testid="stSlider"] {{ padding-top: 6px; }}
 div[data-testid="stSlider"] div[data-baseweb="slider"] > div:first-child {{
-    background: linear-gradient(to right, {_SLIDER_GRADIENT}) !important;
-    height: 10px !important;
-    border-radius: 6px !important;
+    background-image: {_TRACK_BG} !important;
+    background-position: {_TRACK_POS} !important;
+    background-size: {_TRACK_SIZE} !important;
+    background-repeat: no-repeat !important;
+    height: 20px !important;
+    border-radius: 0 !important;
 }}
 div[data-testid="stSlider"] div[data-baseweb="slider"] > div:nth-child(2) {{
     background: transparent !important;
 }}
+/* Streamlit's own "filled range" indicator (min→value), nested one level
+   deeper than the track itself — neutralize it so only our dots/line show. */
+div[data-testid="stSlider"] div[data-baseweb="slider"] > div:first-child > div {{
+    background: transparent !important;
+    background-image: none !important;
+}}
 div[data-testid="stSlider"] div[role="slider"] {{
-    background-color: #FFFFFF !important;
-    border: 3px solid #333333 !important;
-    width: 18px !important;
-    height: 18px !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+    background-color: {_SLIDER_ACCENT} !important;
+    border: none !important;
+    width: 26px !important;
+    height: 26px !important;
+    box-shadow: none !important;
 }}
 </style>
 """
 
 
-def _pillar_level_labels_html(levels: list[dict], selected: int) -> str:
-    """Render the 0-5 label row under a pillar's slider, matching the
-    Strategy/People/... maturity-ladder mockup: plain "0." cell, then bold
-    title + italic "(description)" for levels 1-5. The selected level is
-    highlighted."""
+def _pillar_level_labels_html(levels: list[dict]) -> str:
+    """Render the 0-5 label row under a pillar's slider: number, bold title,
+    italic "(description)" (level 0 has none). Selection is shown by the dot
+    above (the bigger filled stop), not by highlighting a label, so every
+    label uses the same plain style. Labels sit at the exact 0/20/40/60/80/100%
+    points the slider's 6 stops sit at (not 6 equal-width cells), so each
+    stays lined up with its dot."""
+    n = len(levels)
+    slot = 100 / n  # cell width, close to the 1/6 spacing between stops
     cells = []
     for i, level in enumerate(levels):
-        is_selected = i == selected
-        highlight = "background:#EEF3FA;border-radius:8px;" if is_selected else ""
+        desc = (
+            f'<div style="font-size:0.78rem;font-style:italic;color:#666;margin-top:2px;">({level["description"]})</div>'
+            if level["description"] else ""
+        )
+        body = (
+            f'<div style="font-size:0.82rem;font-weight:700;color:#1A1A1A;">{level["name"]}</div>'
+            + desc
+        )
+        pct = i / (n - 1) * 100
         if i == 0:
-            body = f'<div style="font-size:0.82rem;color:#333;">{level["name"]}</div>'
+            pos = f"left:0%; text-align:left;"
+        elif i == n - 1:
+            pos = f"right:0%; text-align:right;"
         else:
-            desc = (
-                f'<div style="font-size:0.78rem;font-style:italic;color:#666;margin-top:2px;">({level["description"]})</div>'
-                if level["description"] else ""
-            )
-            body = (
-                f'<div style="font-size:0.82rem;font-weight:700;color:#1A1A1A;">{level["name"]}</div>'
-                + desc
-            )
+            pos = f"left:{pct}%; transform:translateX(-50%); text-align:center;"
         cells.append(
-            f'<div style="flex:1;min-width:0;text-align:center;{highlight}padding:6px 4px;">'
+            f'<div style="position:absolute;{pos}top:0;width:{slot}%;padding:6px 4px;box-sizing:border-box;">'
             f'<div style="font-size:0.78rem;color:#888;margin-bottom:2px;">{i}.</div>'
             f'{body}'
             f'</div>'
         )
-    return '<div style="display:flex;align-items:flex-start;gap:2px;margin-top:8px;">' + "".join(cells) + '</div>'
+    return (
+        '<div style="position:relative;height:72px;margin-top:8px;padding:0 9px;box-sizing:border-box;">'
+        + "".join(cells)
+        + '</div>'
+    )
 
 
 def render_questions() -> None:
@@ -749,9 +838,10 @@ def render_questions() -> None:
                 value=current,
                 key=f"pillar_{pillar}",
                 label_visibility="collapsed",
+                format_func=lambda x: "",  # hide the native value tooltip/endpoint labels
             )
             st.session_state["answers"][pillar][0] = value
-            st.markdown(_pillar_level_labels_html(levels, value), unsafe_allow_html=True)
+            st.markdown(_pillar_level_labels_html(levels), unsafe_allow_html=True)
         st.markdown("")
 
     st.divider()
@@ -821,34 +911,41 @@ def render_equation_block(answers: dict, total: int, lvl: dict, lang: str) -> No
     st.markdown(html, unsafe_allow_html=True)
 
 
-def _hex_to_rgba(hex_color: str, alpha: float) -> str:
-    hex_color = hex_color.lstrip("#")
-    r, g, b = (int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
-    return f"rgba({r},{g},{b},{alpha})"
-
-
 def render_radar(answers: dict, lang: str) -> None:
-    """Polar bar chart: each dimension is a pie wedge (no gap between them,
-    each in its own color) whose radius — 0 at the center, 5 at the outer
-    ring — encodes that dimension's score, against a white/black grid."""
+    """Polar bar chart: each dimension is a pie wedge, gapped from its
+    neighbors, in a flat accent color, sitting over a pale gray halo that
+    shows the full 0-5 range. Radius (0 at center, 5 at the outer ring)
+    encodes the dimension's score."""
     n = len(PILLARS)
     sector = 360 / n
+    gap = 8  # degrees of visible gap between wedges
+    bar_width = sector - gap
     centers = [i * sector for i in range(n)]
 
     values = [sum(answers[p]) for p in PILLARS]  # raw 0-5 score per pillar
     labels = [f"{PILLAR_ICONS[p]}<br>{PILLAR_NAMES[lang][p]}" for p in PILLARS]
-    fill_colors = [_hex_to_rgba(PILLAR_COLORS[p], 0.6) for p in PILLARS]
-    line_colors = [PILLAR_COLORS[p] for p in PILLARS]
 
     fig = go.Figure()
+    # Pale gray halo: every wedge at full radius (5), no border.
+    fig.add_trace(
+        go.Barpolar(
+            r=[5] * n,
+            theta=centers,
+            width=[bar_width] * n,
+            marker_color=RADAR_TRACK_COLOR,
+            marker_line_width=0,
+            hoverinfo="skip",
+            showlegend=False,
+        )
+    )
+    # Data wedges: flat accent color per pillar, no border.
     fig.add_trace(
         go.Barpolar(
             r=values,
             theta=centers,
-            width=[sector] * n,  # no gap — wedges touch edge to edge
-            marker_color=fill_colors,
-            marker_line_color=line_colors,
-            marker_line_width=2,
+            width=[bar_width] * n,
+            marker_color=[PILLAR_COLORS[p] for p in PILLARS],
+            marker_line_width=0,
             customdata=[PILLAR_NAMES[lang][p] for p in PILLARS],
             hovertemplate="%{customdata}: %{r}/5<extra></extra>",
             showlegend=False,
@@ -856,13 +953,14 @@ def render_radar(answers: dict, lang: str) -> None:
     )
     fig.update_layout(
         polar=dict(
+            barmode="overlay",  # the halo and data wedges overlay, not stack
             radialaxis=dict(
                 range=[0, 5],
                 tickvals=[1, 2, 3, 4, 5],
                 showticklabels=True,
-                gridcolor="#DDDDDD",
-                linecolor="#DDDDDD",
-                tickfont=dict(size=11, color="#000000"),
+                gridcolor="#E5E5E5",
+                linecolor="#E5E5E5",
+                tickfont=dict(size=11, color="#666666"),
             ),
             angularaxis=dict(
                 tickmode="array",
@@ -870,8 +968,8 @@ def render_radar(answers: dict, lang: str) -> None:
                 ticktext=labels,
                 direction="clockwise",
                 rotation=90,
-                gridcolor="#DDDDDD",
-                linecolor="#DDDDDD",
+                showgrid=False,
+                linecolor="rgba(0,0,0,0)",
                 tickfont=dict(size=15, color="#000000"),
             ),
             bgcolor="#FFFFFF",
@@ -1073,6 +1171,32 @@ def render_results() -> None:
 
 
 # ===========================================================================
+# SCREEN 4 — Live Results (organizer/projector view, via ?view=live)
+# ===========================================================================
+def render_live_results() -> None:
+    lang = st.session_state["lang"]
+
+    @st.fragment(run_every="10s")
+    def _live_fragment():
+        agg = _compute_live_aggregate()
+        st.markdown(f"# {t(lang, 'live_title')}")
+
+        if agg["count"] == 0:
+            st.info(t(lang, "live_empty"))
+            return
+
+        st.caption(t(lang, "live_count", count=agg["count"]))
+        synthetic_answers = {p: [agg["averages"][p]] for p in PILLARS}
+        lvl = get_level(agg["total_avg"], lang)
+
+        render_equation_block(synthetic_answers, agg["total_avg"], lvl, lang)
+        st.divider()
+        render_radar(synthetic_answers, lang)
+
+    _live_fragment()
+
+
+# ===========================================================================
 # APP ENTRY
 # ===========================================================================
 def main() -> None:
@@ -1096,6 +1220,12 @@ def main() -> None:
     init_state()
     render_language_switcher()
     lang = st.session_state["lang"]
+
+    # Organizer/projector view — separate from the assessment flow entirely,
+    # reachable at ?view=live regardless of the visitor's own screen state.
+    if st.query_params.get("view") == "live":
+        render_live_results()
+        return
 
     # Dev-only warning when Google Sheets isn't configured.
     if not _has_google_secrets():
