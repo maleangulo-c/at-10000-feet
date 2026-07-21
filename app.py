@@ -3,7 +3,8 @@ At 10,000 Feet — Intelligent Automation Maturity Assessment
 ============================================================
 Single-file Streamlit app for Foro MX 2026.
 
-Screens (st.session_state["screen"]): "welcome" | "questions" | "results".
+Screens (st.session_state["screen"]): "welcome" | "motivation" | "questions" | "results".
+Language (st.session_state["lang"]): "en" | "es".
 
 Run locally:
     streamlit run app.py
@@ -21,231 +22,393 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # ===========================================================================
-# 4. DATA — Questions
+# PILLARS — canonical, language-independent ids (also used as CSV column stems)
 # ===========================================================================
-QUESTIONS: dict[str, list[str]] = {
-    "Data": [
-        "My operating systems (ERP, MES, PLC) share data in real time or are fully integrated.",
-        "I trust the quality of my operational data (it is accurate, complete, consistent).",
-        "There is clear governance: I know who owns each piece of data, who can access it, and how it's used.",
-        "I can access historical and contextualized data for analysis and projections.",
-    ],
-    "Infrastructure": [
-        "My production equipment (machines, sensors, lines) is connected and automatically sends digital data.",
-        "I can share data between different systems without manual intervention (interoperability).",
-        "I have defined and implemented cybersecurity protocols (controlled access, encryption, auditing).",
-        "My infrastructure (networks, servers, cloud) is designed to support real-time analysis and future growth.",
-    ],
-    "Investment & Prioritization": [
-        "I have clarity on the top 3-5 operational challenges to solve in the next 2-3 years.",
-        "For each automation/digitalization initiative, I have built a documented business case (ROI, timeline, resources).",
-        "I have approved budget and financing mechanisms (capex, opex, partner financing) to move forward.",
-        "My leadership has communicated that digital transformation/automation is a strategic priority.",
-    ],
-    "Change Management": [
-        "I have defined training/upskilling plans so my team can use new tools and data.",
-        "There is a visible and committed executive sponsor leading the transformation.",
-        "My operational team sees change as an opportunity (not a threat to their jobs).",
-        "I have people in my organization with skills in data, analytics, and Industry 4.0 (or plans to acquire them).",
-    ],
-    "Operational Control & CI": [
-        "My operational processes are predictable, repeatable, and well documented (I know exactly what happens at each step).",
-        "We have a culture and structure of continuous improvement: we measure, analyze, and optimize regularly (not ad-hoc).",
-    ],
-}
+PILLARS: list[str] = ["strategy", "people", "opex", "connectivity", "intelligence"]
 
-# Icon per pillar — reused in the results list and on the radar vertices.
 PILLAR_ICONS: dict[str, str] = {
-    "Data": "🗄️",
-    "Infrastructure": "🏗️",
-    "Investment & Prioritization": "💰",
-    "Change Management": "🔄",
-    "Operational Control & CI": "⚙️",
+    "strategy": "🎯",
+    "people": "👥",
+    "opex": "⚙️",
+    "connectivity": "🔗",
+    "intelligence": "🧠",
 }
 
-# Short one-line summaries used on the welcome screen.
-PILLAR_BLURBS: dict[str, str] = {
-    "Data": "Quality, governance and access to your operational data.",
-    "Infrastructure": "Connectivity, interoperability, cybersecurity and scalability.",
-    "Investment & Prioritization": "Clear priorities, business cases and funded roadmap.",
-    "Change Management": "Sponsorship, training, culture and talent.",
-    "Operational Control & CI": "Process discipline and continuous improvement.",
+# Per-dimension accent colors for the radar chart.
+PILLAR_COLORS: dict[str, str] = {
+    "strategy": "#C1622D",      # terracotta
+    "people": "#C9A227",        # mustard/gold
+    "opex": "#4C7A8C",          # teal blue
+    "connectivity": "#7FA37A",  # sage green
+    "intelligence": "#9B7FBE",  # purple
 }
 
-# Column-name stems for the analytics sheet, matching pillar order.
-PILLAR_KEYS: dict[str, str] = {
-    "Data": "data",
-    "Infrastructure": "infra",
-    "Investment & Prioritization": "invest",
-    "Change Management": "change",
-    "Operational Control & CI": "opctrl",
+PILLAR_NAMES: dict[str, dict[str, str]] = {
+    "en": {
+        "strategy": "Strategy",
+        "people": "People",
+        "opex": "Operational Excellence",
+        "connectivity": "Connectivity",
+        "intelligence": "Intelligence",
+    },
+    "es": {
+        "strategy": "Estrategia",
+        "people": "Personas",
+        "opex": "Excelencia Operativa",
+        "connectivity": "Conectividad",
+        "intelligence": "Inteligencia",
+    },
+}
+
+# The question shown next to each category name (welcome screen + assessment header).
+PILLAR_QUESTION: dict[str, dict[str, str]] = {
+    "en": {
+        "strategy": "Are you investing in the right opportunities?",
+        "people": "Can your people drive and sustain change?",
+        "opex": "Do you control and continuously improve operations?",
+        "connectivity": "Can information flow across your factory and business?",
+        "intelligence": "How intelligent is your Factory?",
+    },
+    "es": {
+        "strategy": "¿Estás invirtiendo en las oportunidades correctas?",
+        "people": "¿Tu gente puede impulsar y sostener el cambio?",
+        "opex": "¿Controlas y mejoras continuamente tus operaciones?",
+        "connectivity": "¿Puede la información fluir a través de tu planta y tu negocio?",
+        "intelligence": "¿Qué tan inteligente es tu fábrica?",
+    },
 }
 
 # ===========================================================================
-# 6. LEVELS (global)
+# PILLAR_LEVELS — the 0-5 maturity ladder shown on the slider for each
+# category. Index 0 is always "Don't know / not sure". Descriptions marked
+# "Lorem ipsum dolor sit amet" are placeholders to be replaced later.
 # ===========================================================================
-LEVELS = [
-    {"min": 0, "max": 8, "num": 0, "name": "INACTIVE",
-     "description": "Isolated systems, unreliable data, legacy infrastructure, no clear budget or training. Ad-hoc processes with no continuous improvement: you are not ready for digital transformation."},
-    {"min": 9, "max": 17, "num": 1, "name": "REACTIVE",
-     "description": "Partial data and infrastructure, reactive investment with no business case, resistant team. You're moving slowly without a clear strategy: you need a roadmap and a dedicated team."},
-    {"min": 18, "max": 26, "num": 2, "name": "ACTIVE",
-     "description": "Integrated systems, clear priorities, approved budget, team in transition, documented processes. You're on the path: modernize infrastructure and raise data governance."},
-    {"min": 27, "max": 36, "num": 3, "name": "ESTABLISHED",
-     "description": "Reliable data, integrated infrastructure, roadmap with clear financing, trained team, stable operations. You're ready for AI: you can invest in automation with confidence."},
-    {"min": 37, "max": 45, "num": 4, "name": "INTEGRATED",
-     "description": "Strategic data, modern infrastructure, monitored investment, talent center of excellence, data-driven improvement. You're a benchmark: your focus is continuous innovation."},
-    {"min": 46, "max": 54, "num": 5, "name": "PROACTIVE",
-     "description": "Mature data ecosystem, zero-trust infrastructure, reinvestment-based financing, learning-first talent, integrated AI. You're an industry leader: you lead ecosystem transformation."},
+PILLAR_LEVELS: dict[str, dict[str, list[dict]]] = {
+    "en": {
+        "strategy": [
+            {"name": "Don't know / not sure", "description": ""},
+            {"name": "Awareness of pain points and business losses", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Digital strategy", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Transformation Roadmap", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Investment prioritization", "description": "business case"},
+            {"name": "Digital board", "description": "KPI tracking and value measurement"},
+        ],
+        "people": [
+            {"name": "Don't know / not sure", "description": ""},
+            {"name": "Capability assessment", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Training", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Collaboration", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Leadership sponsorship", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Change management", "description": "Lorem ipsum dolor sit amet"},
+        ],
+        "opex": [
+            {"name": "Don't know / not sure", "description": ""},
+            {"name": "Corrective actions", "description": "firefighting"},
+            {"name": "Standard & documented procedures", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Performance management", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Preventive improvement", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Continuous improvement culture", "description": "Lorem ipsum dolor sit amet"},
+        ],
+        "connectivity": [
+            {"name": "Don't know / not sure", "description": ""},
+            {"name": "Know your installed base", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Up-to-date automation and production control", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Connected assets and data collection", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "OT/IT integration", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Secure connected enterprise", "description": "Cyber security?"},
+        ],
+        "intelligence": [
+            {"name": "Don't know / not sure", "description": ""},
+            {"name": "Visibility", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Control and monitoring", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Digital workflow", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Data-driven decision making", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Predictive intelligence", "description": "Lorem ipsum dolor sit amet"},
+        ],
+    },
+    "es": {
+        "strategy": [
+            {"name": "No sé / no estoy seguro", "description": ""},
+            {"name": "Conciencia de puntos de dolor y pérdidas de negocio", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Estrategia digital", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Hoja de ruta de transformación", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Priorización de inversión", "description": "caso de negocio"},
+            {"name": "Tablero digital", "description": "seguimiento de KPI y medición de valor"},
+        ],
+        "people": [
+            {"name": "No sé / no estoy seguro", "description": ""},
+            {"name": "Evaluación de capacidades", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Capacitación", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Colaboración", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Patrocinio de liderazgo", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Gestión del cambio", "description": "Lorem ipsum dolor sit amet"},
+        ],
+        "opex": [
+            {"name": "No sé / no estoy seguro", "description": ""},
+            {"name": "Acciones correctivas", "description": "apagar incendios"},
+            {"name": "Procedimientos estándar y documentados", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Gestión del desempeño", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Mejora preventiva", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Cultura de mejora continua", "description": "Lorem ipsum dolor sit amet"},
+        ],
+        "connectivity": [
+            {"name": "No sé / no estoy seguro", "description": ""},
+            {"name": "Conoce tu base instalada", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Automatización y control de producción actualizados", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Activos conectados y recolección de datos", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Integración OT/IT", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Empresa conectada segura", "description": "¿Ciberseguridad?"},
+        ],
+        "intelligence": [
+            {"name": "No sé / no estoy seguro", "description": ""},
+            {"name": "Visibilidad", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Control y monitoreo", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Flujo de trabajo digital", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Toma de decisiones basada en datos", "description": "Lorem ipsum dolor sit amet"},
+            {"name": "Inteligencia predictiva", "description": "Lorem ipsum dolor sit amet"},
+        ],
+    },
+}
+
+
+def get_pillar_steps(lang: str, pillar: str) -> list[dict]:
+    """Build the 5-step maturity ladder (0→1 .. 4→5) for the Recommendations tab,
+    reusing the same level names/descriptions shown on the assessment slider."""
+    levels = PILLAR_LEVELS[lang][pillar]
+    return [
+        {
+            "transition": f"{i}→{i + 1}",
+            "title": levels[i + 1]["name"],
+            "description": levels[i + 1]["description"],
+            "factory_os": "no",
+        }
+        for i in range(5)
+    ]
+
+
+# ===========================================================================
+# LEVELS — point ranges are language-independent; name/description are not.
+# Total score ranges from 0 to len(PILLARS) * 5 (one 0-5 slider per pillar).
+# ===========================================================================
+TOTAL_MAX = len(PILLARS) * 5
+
+LEVELS_META: list[dict] = [
+    {"min": 0, "max": 3, "num": 0},
+    {"min": 4, "max": 7, "num": 1},
+    {"min": 8, "max": 12, "num": 2},
+    {"min": 13, "max": 16, "num": 3},
+    {"min": 17, "max": 21, "num": 4},
+    {"min": 22, "max": 25, "num": 5},
 ]
 
-# ===========================================================================
-# 7. RECOMMENDATIONS catalog (keys must exactly match QUESTIONS.keys())
-# ===========================================================================
-RECOMMENDATIONS: dict[str, list[dict]] = {
-    "Data": [
-        {"transition": "0→1", "title": "Consolidate data in pilot data lake",
-         "description": "Integrate data from 2-3 operational systems (ERP, MES, production) into a centralized basic repository for initial analysis.",
-         "factory_os": "no"},
-        {"transition": "1→2", "title": "Document data governance framework",
-         "description": "Define in writing: who owns each key data asset, who accesses it, minimum quality standards, retention policies, data lineage.",
-         "factory_os": "no"},
-        {"transition": "2→3", "title": "Implement Master Data Management (MDM)",
-         "description": "Create single source of truth for master data: products, locations, equipment, suppliers. Eliminate duplicates and conflicts.",
-         "factory_os": "no"},
-        {"transition": "3→4", "title": "Deploy data catalog with automated lineage",
-         "description": "Tool that maps origin, transformations, and usage of each data asset. Include automated quality monitoring.",
-         "factory_os": "no"},
-        {"transition": "4→5", "title": "Implement predictive ML models",
-         "description": "Develop models for demand forecasting, predictive maintenance, inventory optimization using historical data.",
-         "factory_os": "yes"},
+LEVELS_TEXT: dict[str, list[dict]] = {
+    "en": [
+        {"name": "INACTIVE",
+         "description": "Isolated systems, unreliable data, legacy infrastructure, no clear budget or training. Ad-hoc processes with no continuous improvement: you are not ready for digital transformation."},
+        {"name": "REACTIVE",
+         "description": "Partial data and infrastructure, reactive investment with no business case, resistant team. You're moving slowly without a clear strategy: you need a roadmap and a dedicated team."},
+        {"name": "ACTIVE",
+         "description": "Integrated systems, clear priorities, approved budget, team in transition, documented processes. You're on the path: modernize infrastructure and raise data governance."},
+        {"name": "ESTABLISHED",
+         "description": "Reliable data, integrated infrastructure, roadmap with clear financing, trained team, stable operations. You're ready for AI: you can invest in automation with confidence."},
+        {"name": "INTEGRATED",
+         "description": "Strategic data, modern infrastructure, monitored investment, talent center of excellence, data-driven improvement. You're a benchmark: your focus is continuous innovation."},
+        {"name": "PROACTIVE",
+         "description": "Mature data ecosystem, zero-trust infrastructure, reinvestment-based financing, learning-first talent, integrated AI. You're an industry leader: you lead ecosystem transformation."},
     ],
-    "Infrastructure": [
-        {"transition": "0→1", "title": "Cybersecurity audit + patch critical systems",
-         "description": "Assess vulnerabilities in legacy machines, apply critical patches, identify disconnected equipment, document gaps.",
-         "factory_os": "no"},
-        {"transition": "1→2", "title": "Connect equipment with IoT sensors / adapters",
-         "description": "Install sensors or gateways on key machines to send production data automatically (no manual intervention).",
-         "factory_os": "yes"},
-        {"transition": "2→3", "title": "Implement security-by-design architecture",
-         "description": "Segregate OT/IT networks, implement VPN, multi-factor authentication, encryption in transit, access audit trails.",
-         "factory_os": "partially"},
-        {"transition": "3→4", "title": "Migrate to hybrid cloud or edge computing",
-         "description": "Move certain data and processing to cloud (with on-premise for sensitive data). Enable real-time processing near equipment.",
-         "factory_os": "yes"},
-        {"transition": "4→5", "title": "Implement zero-trust architecture",
-         "description": "Micro-segmentation, continuous monitoring, automated threat response, assume breach always present.",
-         "factory_os": "yes"},
-    ],
-    "Investment & Prioritization": [
-        {"transition": "0→1", "title": "Map top 5 operational challenges with impact",
-         "description": "Create 2x2 matrix: urgency vs. financial impact. Quantify current losses per challenge.",
-         "factory_os": "no"},
-        {"transition": "1→2", "title": "Develop 3 formal business cases",
-         "description": "For each top initiative: investment, expected ROI (%), timeline, assumptions, identified risks, responsible team.",
-         "factory_os": "no"},
-        {"transition": "2→3", "title": "Create investment governance (steering committee)",
-         "description": "Quarterly committee that prioritizes projects, allocates budget, reviews progress vs. plan. Use scoring matrix (ROI × Strategic fit × Risk).",
-         "factory_os": "no"},
-        {"transition": "3→4", "title": "Implement financial tracking dashboard",
-         "description": "Real-time dashboard: actual vs. budgeted investment, cumulative ROI vs. projected, variances, automatic rebalancing.",
-         "factory_os": "yes"},
-        {"transition": "4→5", "title": "Establish open innovation model",
-         "description": "Set aside 10-15% of budget for pilots, partnerships with startups/universities, internal venture arm.",
-         "factory_os": "partially"},
-    ],
-    "Change Management": [
-        {"transition": "0→1", "title": "Appoint executive sponsor and core team",
-         "description": "Name a visible C-level leader (sponsor), dedicate a core team of 3-5 people full-time to lead transformation.",
-         "factory_os": "no"},
-        {"transition": "1→2", "title": "Launch structured communication plan",
-         "description": "Key messages, 3-4 channels (town halls, newsletters, floor), weekly/monthly cadence, storytelling with tangible early wins.",
-         "factory_os": "no"},
-        {"transition": "2→3", "title": "Design role-based training program",
-         "description": "Identify 5 critical roles, specific modules per role (data analysts, operators, supervisors), hands-on labs, internal certification.",
-         "factory_os": "no"},
-        {"transition": "3→4", "title": "Create center of excellence",
-         "description": "Dedicated team of 5-8 people in data, analytics, automation. Coach/mentor roles. Monthly internal community (show & tell).",
-         "factory_os": "no"},
-        {"transition": "4→5", "title": "Transform into learning organization",
-         "description": "Annual budget per person for training, conferences, certifications. Publish case studies or research papers. Retain senior talent as mentors.",
-         "factory_os": "no"},
-    ],
-    "Operational Control & CI": [
-        {"transition": "0→1", "title": "Document 5 critical operational processes",
-         "description": "Map as-is: flows, owners, cycle times, associated KPIs. Use SIPOC diagrams or value stream mapping.",
-         "factory_os": "no"},
-        {"transition": "1→2", "title": "Implement visual control on floor",
-         "description": "Line dashboards with real-time KPIs, daily control board, 10-15 min huddles with data review. Full visibility.",
-         "factory_os": "yes"},
-        {"transition": "2→3", "title": "Structure continuous improvement cycle (PDCA)",
-         "description": "Monthly kaizen team, Plan-Do-Check-Act methodology, public idea tracking (submitted vs. implemented), goal: 1 improvement per person / year.",
-         "factory_os": "no"},
-        {"transition": "3→4", "title": "Implement data-driven automatic optimization",
-         "description": "Algorithms that suggest improvements: setup changes, line speed, product mix. Automatic recommendations on dashboard.",
-         "factory_os": "yes"},
-        {"transition": "4→5", "title": "Automate operational decisions with AI",
-         "description": "System that adjusts in real-time: line speed, product mix, predictive maintenance, without human intervention (within parameters).",
-         "factory_os": "yes"},
+    "es": [
+        {"name": "INACTIVO",
+         "description": "Sistemas aislados, datos poco confiables, infraestructura obsoleta, sin presupuesto ni capacitación claros. Procesos improvisados sin mejora continua: no estás listo para la transformación digital."},
+        {"name": "REACTIVO",
+         "description": "Datos e infraestructura parciales, inversión reactiva sin caso de negocio, equipo resistente. Avanzas lentamente sin una estrategia clara: necesitas una hoja de ruta y un equipo dedicado."},
+        {"name": "ACTIVO",
+         "description": "Sistemas integrados, prioridades claras, presupuesto aprobado, equipo en transición, procesos documentados. Vas por buen camino: moderniza la infraestructura y eleva la gobernanza de datos."},
+        {"name": "ESTABLECIDO",
+         "description": "Datos confiables, infraestructura integrada, hoja de ruta con financiamiento claro, equipo capacitado, operaciones estables. Estás listo para la IA: puedes invertir en automatización con confianza."},
+        {"name": "INTEGRADO",
+         "description": "Datos estratégicos, infraestructura moderna, inversión monitoreada, centro de excelencia de talento, mejora basada en datos. Eres un referente: tu enfoque es la innovación continua."},
+        {"name": "PROACTIVO",
+         "description": "Ecosistema de datos maduro, infraestructura de confianza cero, financiamiento basado en reinversión, talento con mentalidad de aprendizaje continuo, IA integrada. Eres líder de la industria: lideras la transformación del ecosistema."},
     ],
 }
 
+
+def get_level(total: int, lang: str) -> dict:
+    """Return the merged (meta + text) level entry for a total score."""
+    for meta in LEVELS_META:
+        if meta["min"] <= total <= meta["max"]:
+            text = LEVELS_TEXT[lang][meta["num"]]
+            return {**meta, **text}
+    meta = LEVELS_META[-1]
+    return {**meta, **LEVELS_TEXT[lang][meta["num"]]}
+
+
+def level_name(num: int, lang: str) -> str:
+    return LEVELS_TEXT[lang][num]["name"]
+
+
 # ===========================================================================
-# 9. STYLE constants
+# UI STRINGS
+# ===========================================================================
+UI: dict[str, dict[str, str]] = {
+    "en": {
+        "title": "At 10,000 Feet: How Ready Are You for Intelligent Transition?",
+        "intro1": (
+            "This self-diagnostic helps you understand how prepared your operation is "
+            "for **intelligent automation**. In a few minutes you'll rate your maturity "
+            "across five dimensions and receive a normalized profile, your overall "
+            "readiness level, and a personalized roadmap of next moves."
+        ),
+        "pillars_prefix": "The five dimensions are: ",
+        "step_answer": "Answer",
+        "step_calculate": "Calculate",
+        "step_review": "Review",
+        "tell_us": "Tell us about you",
+        "full_name": "Full name *",
+        "work_email": "Work email *",
+        "company": "Company *",
+        "role": "Role / title *",
+        "consent_label": "Data treatment policy *",
+        "consent_agree": "I confirm I agree with TetraPak's data treatment policy.",
+        "consent_decline": (
+            "I want to do the exercise, but I don't want to share my data with TetraPak. "
+            "By selecting this, I confirm I will not receive strategic information about "
+            "solutions I could get through TetraPak to advance my intelligent transformation."
+        ),
+        "invalid_email": "Please enter a valid email address.",
+        "start_assessment": "Start Assessment",
+        "motivation_question": "What is your main goal or motivation to advance in the intelligent transition?",
+        "motivation_placeholder": "Write your answer here...",
+        "continue": "Continue",
+        "questions_intro": "Move each slider to the maturity level that best describes your organization today.",
+        "back": "← Back",
+        "calc_score": "Calculate My Score",
+        "results_for": "Results for {name} — {company}",
+        "tab_overview": "Overview",
+        "tab_reco": "Recommendations",
+        "readiness_eq": "#### Your readiness equation",
+        "snapshot": "#### A snapshot of your maturity level",
+        "your_level": "#### Your level",
+        "your_readiness": "YOUR READINESS",
+        "points": "Points",
+        "level": "Level",
+        "level_name_col": "Level Name",
+        "level_header": "Level {num} — {name}",
+        "reco_intro": (
+            "Based on your scores, here's the maturity ladder for each pillar. "
+            "✅ Achieved  ·  ▶️ Your next move  ·  ○ Future targets."
+        ),
+        "mastered": "You've mastered this pillar. Focus on sustaining excellence.",
+        "pillar_level_header": "{pillar} — Level {num} ({name})",
+        "factoryos_title": "How FactoryOS accelerates you",
+        "factoryos_body": (
+            "<b>{accel}</b> of your <b>{total}</b> remaining recommended "
+            "actions can be accelerated with FactoryOS."
+        ),
+        "badge_full": "Full",
+        "badge_partial": "Partial",
+        "learn_more": "Learn more about FactoryOS →",
+        "start_over": "Start Over",
+        "dev_warning": (
+            "⚠️ Dev mode: Google Sheets not configured. "
+            "Submissions are being written to `{csv}`."
+        ),
+    },
+    "es": {
+        "title": "A 10,000 Pies: ¿Qué Tan Listo Estás para la Transición Inteligente?",
+        "intro1": (
+            "Este autodiagnóstico te ayuda a entender qué tan preparada está tu operación "
+            "para la **automatización inteligente**. En unos minutos calificarás tu madurez "
+            "en cinco dimensiones y recibirás un perfil normalizado, tu nivel de "
+            "preparación general y una hoja de ruta personalizada de próximos pasos."
+        ),
+        "pillars_prefix": "Las cinco dimensiones son: ",
+        "step_answer": "Responder",
+        "step_calculate": "Calcular",
+        "step_review": "Revisar",
+        "tell_us": "Cuéntanos sobre ti",
+        "full_name": "Nombre completo *",
+        "work_email": "Correo corporativo *",
+        "company": "Empresa *",
+        "role": "Puesto / cargo *",
+        "consent_label": "Política de tratamiento de datos *",
+        "consent_agree": "Confirmo estar de acuerdo con la política de tratamiento de datos de TetraPak.",
+        "consent_decline": (
+            "Quiero hacer el ejercicio pero no quiero compartir mis datos con TetraPak. "
+            "Al marcar esto, confirmo que no recibiré información estratégica sobre las "
+            "soluciones que pudiera obtener por medio de TetraPak para avanzar en mi "
+            "transformación inteligente."
+        ),
+        "invalid_email": "Por favor ingresa un correo electrónico válido.",
+        "start_assessment": "Iniciar Evaluación",
+        "motivation_question": "¿Cuál es tu principal objetivo o motivación para avanzar en la transición inteligente?",
+        "motivation_placeholder": "Escribe tu respuesta aquí...",
+        "continue": "Continuar",
+        "questions_intro": "Mueve cada control deslizante al nivel de madurez que mejor describa a tu organización hoy.",
+        "back": "← Atrás",
+        "calc_score": "Calcular Mi Puntaje",
+        "results_for": "Resultados para {name} — {company}",
+        "tab_overview": "Resumen",
+        "tab_reco": "Recomendaciones",
+        "readiness_eq": "#### Tu ecuación de preparación",
+        "snapshot": "#### Una vista de tu nivel de madurez",
+        "your_level": "#### Tu nivel",
+        "your_readiness": "TU PREPARACIÓN",
+        "points": "Puntos",
+        "level": "Nivel",
+        "level_name_col": "Nombre del Nivel",
+        "level_header": "Nivel {num} — {name}",
+        "reco_intro": (
+            "Según tus puntajes, esta es la escalera de madurez para cada pilar. "
+            "✅ Logrado  ·  ▶️ Tu próximo paso  ·  ○ Metas futuras."
+        ),
+        "mastered": "Has dominado este pilar. Enfócate en mantener la excelencia.",
+        "pillar_level_header": "{pillar} — Nivel {num} ({name})",
+        "factoryos_title": "Cómo FactoryOS te acelera",
+        "factoryos_body": (
+            "<b>{accel}</b> de tus <b>{total}</b> acciones recomendadas "
+            "restantes pueden acelerarse con FactoryOS."
+        ),
+        "badge_full": "Completo",
+        "badge_partial": "Parcial",
+        "learn_more": "Conoce más sobre FactoryOS →",
+        "start_over": "Comenzar de Nuevo",
+        "dev_warning": (
+            "⚠️ Modo desarrollo: Google Sheets no está configurado. "
+            "Los envíos se están guardando en `{csv}`."
+        ),
+    },
+}
+
+
+def t(lang: str, key: str, **kwargs) -> str:
+    """Look up a UI string for the given language and format it."""
+    text = UI[lang][key]
+    return text.format(**kwargs) if kwargs else text
+
+
+# ===========================================================================
+# STYLE constants
 # ===========================================================================
 PRIMARY = "#7B9BC9"
 CAPSULE_FILL = "#B8CCE4"
 ACCENT = "#7B9BC9"
 
-PILLARS = list(QUESTIONS.keys())  # canonical radar / display order
-
 
 # ===========================================================================
-# 5. SCORING LOGIC
+# SCORING LOGIC
 # ===========================================================================
 def pillar_max(pillar: str) -> int:
-    """Max score for a pillar = number of questions * 3."""
-    return len(QUESTIONS[pillar]) * 3
-
-
-def get_pillar_level(raw: int, pmax: int) -> int:
-    """Map a pillar's raw score to a 0-5 level using proportional cuts
-    consistent with the global LEVELS table."""
-    pct = raw / pmax * 100
-    if pct <= 15:
-        return 0   # Inactive
-    if pct <= 31:
-        return 1   # Reactive
-    if pct <= 48:
-        return 2   # Active
-    if pct <= 66:
-        return 3   # Established
-    if pct <= 84:
-        return 4   # Integrated
-    return 5       # Proactive
-
-
-def level_for_total(total: int) -> dict:
-    """Return the LEVELS entry whose [min, max] contains total."""
-    for lvl in LEVELS:
-        if lvl["min"] <= total <= lvl["max"]:
-            return lvl
-    return LEVELS[-1]
-
-
-def level_name(num: int) -> str:
-    """Level name for a 0-5 level number."""
-    return LEVELS[num]["name"]
+    """Max level for a pillar (0-5 slider)."""
+    return 5
 
 
 # ===========================================================================
-# 8. ANALYTICS — persistence
+# ANALYTICS — persistence
 # ===========================================================================
 SHEET_HEADER = (
-    ["timestamp_iso", "name", "company", "email", "role"]
-    + [f"q_{PILLAR_KEYS[p]}_{i + 1}" for p in PILLARS for i in range(len(QUESTIONS[p]))]
-    + [f"{PILLAR_KEYS[p]}_raw" for p in PILLARS]
-    + [f"{PILLAR_KEYS[p]}_level" for p in PILLARS]
+    ["timestamp_iso", "share_data", "name", "company", "email", "role", "motivation", "language"]
+    + [f"{p}_level" for p in PILLARS]
     + ["total", "level_num", "level_name"]
 )
 
@@ -301,31 +464,41 @@ def _get_worksheet():
         return None
 
 
-def build_row(profile: dict, answers: dict) -> list:
-    """Assemble one analytics row in the fixed column order."""
-    flat_answers = [answers[p][i] for p in PILLARS for i in range(len(QUESTIONS[p]))]
-    raws = [sum(answers[p]) for p in PILLARS]
-    levels = [get_pillar_level(sum(answers[p]), pillar_max(p)) for p in PILLARS]
-    total = sum(raws)
-    lvl = level_for_total(total)
+def build_row(profile: dict, answers: dict, lang: str) -> list:
+    """Assemble one analytics row in the fixed column order.
+
+    Level/pillar names are always stored in English for consistent analytics,
+    regardless of which language the respondent used. When the respondent
+    declined to share their data with TetraPak, name/company/email/role/
+    motivation are omitted (blank) but the pillar answers/scores are still
+    recorded so aggregate Foro MX stats stay complete.
+    """
+    share_data = profile.get("share_data", True)
+    levels = [sum(answers[p]) for p in PILLARS]  # each answers[p] is a 1-item list holding the selected level (0-5)
+    total = sum(levels)
+    lvl = get_level(total, "en")
+    pii = (
+        [profile["name"], profile["company"], profile["email"], profile["role"], profile.get("motivation", "")]
+        if share_data else ["", "", "", "", ""]
+    )
     return (
         [
             datetime.now(timezone.utc).isoformat(),
-            profile["name"], profile["company"], profile["email"], profile["role"],
+            "yes" if share_data else "no",
         ]
-        + flat_answers
-        + raws
+        + pii
+        + [lang]
         + levels
         + [total, lvl["num"], lvl["name"]]
     )
 
 
-def persist_submission(profile: dict, answers: dict) -> None:
+def persist_submission(profile: dict, answers: dict, lang: str) -> None:
     """Append one row to Google Sheets, or fall back to local CSV.
 
     Never raises — analytics must not block the user from their result.
     """
-    row = build_row(profile, answers)
+    row = build_row(profile, answers, lang)
 
     ws = _get_worksheet()
     if ws is not None:
@@ -352,12 +525,12 @@ def persist_submission(profile: dict, answers: dict) -> None:
 # ===========================================================================
 def init_state() -> None:
     st.session_state.setdefault("screen", "welcome")
+    st.session_state.setdefault("lang", "en")
     st.session_state.setdefault("profile", {})
-    # answers[pillar] = list of len(questions) entries, each None or 0-3.
+    # answers[pillar] = [level], a 1-item list holding the selected 0-5 maturity level.
+    # Default is 0 ("Don't know / not sure"), a legitimate answer on its own.
     if "answers" not in st.session_state:
-        st.session_state["answers"] = {
-            p: [None] * len(QUESTIONS[p]) for p in PILLARS
-        }
+        st.session_state["answers"] = {p: [0] for p in PILLARS}
 
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -394,138 +567,205 @@ def scroll_to_top() -> None:
     )
 
 
+def render_language_switcher() -> None:
+    """Small language selector shown top-right on every screen."""
+    _, col = st.columns([6, 1])
+    with col:
+        st.selectbox(
+            "Language",
+            options=["en", "es"],
+            format_func=lambda x: "🇬🇧 English" if x == "en" else "🇪🇸 Español",
+            key="lang",
+            label_visibility="collapsed",
+        )
+
+
 # ===========================================================================
 # SCREEN 1 — Welcome + participant info
 # ===========================================================================
 def render_welcome() -> None:
-    st.title("At 10,000 Feet: How Ready Are You for Intelligent Transition?")
+    lang = st.session_state["lang"]
+    st.title(t(lang, "title"))
 
-    st.markdown(
-        "This self-diagnostic helps you understand how prepared your operation is "
-        "for **intelligent automation**. In a few minutes you'll answer 18 questions "
-        "across five maturity pillars and receive a normalized profile, your overall "
-        "readiness level, and a personalized roadmap of next moves."
+    st.markdown(t(lang, "intro1"))
+
+    pillars_line = t(lang, "pillars_prefix") + " · ".join(
+        f"**{PILLAR_NAMES[lang][p]}**" for p in PILLARS
     )
-    st.markdown(
-        "The five pillars are: "
-        "**Data** (quality, governance, access) · "
-        "**Infrastructure** (connectivity, security, scalability) · "
-        "**Investment & Prioritization** (priorities, business cases, funding) · "
-        "**Change Management** (sponsorship, training, culture) · "
-        "**Operational Control & CI** (process discipline and continuous improvement)."
-    )
+    st.markdown(pillars_line)
 
     st.markdown(
         '<div style="font-size:1.5rem;font-weight:600;color:#333;margin:6px 0;">'
-        '<span style="font-size:2.0rem;">✍️</span> Answer'
+        f'<span style="font-size:2.0rem;">✍️</span> {t(lang, "step_answer")}'
         ' &nbsp;→&nbsp; '
-        '<span style="font-size:2.0rem;">🧮</span> Calculate'
+        f'<span style="font-size:2.0rem;">🧮</span> {t(lang, "step_calculate")}'
         ' &nbsp;→&nbsp; '
-        '<span style="font-size:2.0rem;">📊</span> Review'
+        f'<span style="font-size:2.0rem;">📊</span> {t(lang, "step_review")}'
         '</div>',
         unsafe_allow_html=True,
     )
     st.divider()
 
-    st.subheader("Tell us about you")
+    st.subheader(t(lang, "tell_us"))
     col1, col2 = st.columns(2)
     with col1:
-        name = st.text_input("Full name *", key="in_name")
-        email = st.text_input("Work email *", key="in_email")
+        name = st.text_input(t(lang, "full_name"), key="in_name")
+        email = st.text_input(t(lang, "work_email"), key="in_email")
     with col2:
-        company = st.text_input("Company *", key="in_company")
-        role = st.text_input("Role / title *", key="in_role")
+        company = st.text_input(t(lang, "company"), key="in_company")
+        role = st.text_input(t(lang, "role"), key="in_role")
 
-    consent = st.checkbox(
-        "I agree that my anonymized responses may be used for Foro MX 2026 analytics.",
-        key="in_consent",
+    st.markdown(f"<strong>{t(lang, 'consent_label')}</strong>", unsafe_allow_html=True)
+    consent_choice = st.radio(
+        t(lang, "consent_label"),
+        options=["agree", "decline"],
+        format_func=lambda x: t(lang, "consent_agree") if x == "agree" else t(lang, "consent_decline"),
+        index=None,
+        key="in_consent_choice",
+        label_visibility="collapsed",
     )
 
     email_ok = bool(EMAIL_RE.match(email.strip())) if email else False
     if email and not email_ok:
-        st.caption(":red[Please enter a valid email address.]")
+        st.caption(f":red[{t(lang, 'invalid_email')}]")
 
     all_filled = all(v.strip() for v in (name, company, email, role))
-    can_start = all_filled and email_ok and consent
+    can_start = all_filled and email_ok and consent_choice is not None
 
-    if st.button("Start Assessment", type="primary", disabled=not can_start):
+    if st.button(t(lang, "start_assessment"), type="primary", disabled=not can_start):
         st.session_state["profile"] = {
             "name": name.strip(),
             "company": company.strip(),
             "email": email.strip(),
             "role": role.strip(),
+            "share_data": consent_choice == "agree",
         }
-        st.session_state["screen"] = "questions"
+        st.session_state["screen"] = "motivation"
         st.rerun()
+
+
+# ===========================================================================
+# SCREEN 1B — Motivation
+# ===========================================================================
+def render_motivation() -> None:
+    lang = st.session_state["lang"]
+    st.subheader(t(lang, "motivation_question"))
+
+    current = st.session_state["profile"].get("motivation", "")
+    answer = st.text_area(
+        t(lang, "motivation_question"),
+        value=current,
+        placeholder=t(lang, "motivation_placeholder"),
+        key="in_motivation",
+        label_visibility="collapsed",
+        height=150,
+    )
+    can_continue = bool(answer.strip())
+
+    cols = st.columns([1, 3])
+    with cols[0]:
+        if st.button(t(lang, "back"), key="back_to_welcome_from_motivation"):
+            st.session_state["screen"] = "welcome"
+            st.rerun()
+    with cols[1]:
+        if st.button(t(lang, "continue"), type="primary", disabled=not can_continue):
+            st.session_state["profile"]["motivation"] = answer.strip()
+            st.session_state["screen"] = "questions"
+            st.rerun()
 
 
 # ===========================================================================
 # SCREEN 2 — Questionnaire
 # ===========================================================================
-def _count_answered() -> int:
-    return sum(
-        1
-        for p in PILLARS
-        for v in st.session_state["answers"][p]
-        if v is not None
-    )
+# Gradient stops (dark red → red → orange → pale yellow → yellow-green → green),
+# evenly spaced across the 0-5 slider track.
+_SLIDER_GRADIENT = "#B71C1C 0%, #E53935 20%, #FB8C00 40%, #FDD835 60%, #C0CA33 80%, #7CB342 100%"
+
+_SLIDER_CSS = f"""
+<style>
+div[data-testid="stSlider"] {{ padding-top: 2px; }}
+div[data-testid="stSlider"] div[data-baseweb="slider"] > div:first-child {{
+    background: linear-gradient(to right, {_SLIDER_GRADIENT}) !important;
+    height: 10px !important;
+    border-radius: 6px !important;
+}}
+div[data-testid="stSlider"] div[data-baseweb="slider"] > div:nth-child(2) {{
+    background: transparent !important;
+}}
+div[data-testid="stSlider"] div[role="slider"] {{
+    background-color: #FFFFFF !important;
+    border: 3px solid #333333 !important;
+    width: 18px !important;
+    height: 18px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+}}
+</style>
+"""
+
+
+def _pillar_level_labels_html(levels: list[dict], selected: int) -> str:
+    """Render the 0-5 label row under a pillar's slider, matching the
+    Strategy/People/... maturity-ladder mockup: plain "0." cell, then bold
+    title + italic "(description)" for levels 1-5. The selected level is
+    highlighted."""
+    cells = []
+    for i, level in enumerate(levels):
+        is_selected = i == selected
+        highlight = "background:#EEF3FA;border-radius:8px;" if is_selected else ""
+        if i == 0:
+            body = f'<div style="font-size:0.82rem;color:#333;">{level["name"]}</div>'
+        else:
+            desc = (
+                f'<div style="font-size:0.78rem;font-style:italic;color:#666;margin-top:2px;">({level["description"]})</div>'
+                if level["description"] else ""
+            )
+            body = (
+                f'<div style="font-size:0.82rem;font-weight:700;color:#1A1A1A;">{level["name"]}</div>'
+                + desc
+            )
+        cells.append(
+            f'<div style="flex:1;min-width:0;text-align:center;{highlight}padding:6px 4px;">'
+            f'<div style="font-size:0.78rem;color:#888;margin-bottom:2px;">{i}.</div>'
+            f'{body}'
+            f'</div>'
+        )
+    return '<div style="display:flex;align-items:flex-start;gap:2px;margin-top:8px;">' + "".join(cells) + '</div>'
 
 
 def render_questions() -> None:
-    total_q = sum(len(v) for v in QUESTIONS.values())
-    answered = _count_answered()
+    lang = st.session_state["lang"]
+    st.markdown(_SLIDER_CSS, unsafe_allow_html=True)
+    st.markdown(t(lang, "questions_intro"))
+    st.markdown("")
 
-    # Sticky progress indicator.
-    st.markdown(f"### Answered {answered} of {total_q} questions")
-    st.progress(answered / total_q)
-
-    st.info(
-        "**Scale:**  "
-        "**0** — Not implemented / not present  ·  "
-        "**1** — Early / partial  ·  "
-        "**2** — Mostly in place  ·  "
-        "**3** — Fully consolidated"
-    )
-
-    for idx, pillar in enumerate(PILLARS):
-        p_answered = sum(1 for v in st.session_state["answers"][pillar] if v is not None)
-        p_total = len(QUESTIONS[pillar])
-        label = f"{PILLAR_ICONS[pillar]}  {pillar}  —  {p_answered}/{p_total} answered"
-        # `expanded` is re-applied on every rerun, so a static False would slam
-        # the section shut each time the user clicks a radio inside it. Keep a
-        # pillar open once it's the first one or has any answer.
-        keep_open = (idx == 0) or (p_answered > 0)
-        with st.expander(label, expanded=keep_open):
-            for qi, question in enumerate(QUESTIONS[pillar]):
-                current = st.session_state["answers"][pillar][qi]
-                choice = st.radio(
-                    f"{question}",
-                    options=[0, 1, 2, 3],
-                    index=None if current is None else current,
-                    horizontal=True,
-                    key=f"q_{PILLAR_KEYS[pillar]}_{qi}",
-                )
-                st.session_state["answers"][pillar][qi] = choice
+    for pillar in PILLARS:
+        levels = PILLAR_LEVELS[lang][pillar]
+        with st.container(border=True):
+            st.markdown(f"**{PILLAR_NAMES[lang][pillar]}** — {PILLAR_QUESTION[lang][pillar]}")
+            current = st.session_state["answers"][pillar][0]
+            value = st.select_slider(
+                PILLAR_NAMES[lang][pillar],
+                options=[0, 1, 2, 3, 4, 5],
+                value=current,
+                key=f"pillar_{pillar}",
+                label_visibility="collapsed",
+            )
+            st.session_state["answers"][pillar][0] = value
+            st.markdown(_pillar_level_labels_html(levels, value), unsafe_allow_html=True)
+        st.markdown("")
 
     st.divider()
-    # Re-count after widgets may have updated state this run.
-    answered = _count_answered()
-    can_calc = answered == total_q
-
     cols = st.columns([1, 3])
     with cols[0]:
-        if st.button("← Back", key="back_to_welcome"):
+        if st.button(t(lang, "back"), key="back_to_welcome"):
             st.session_state["screen"] = "welcome"
             st.rerun()
     with cols[1]:
-        if st.button("Calculate My Score", type="primary", disabled=not can_calc):
-            persist_submission(st.session_state["profile"], st.session_state["answers"])
+        if st.button(t(lang, "calc_score"), type="primary"):
+            persist_submission(st.session_state["profile"], st.session_state["answers"], lang)
             st.session_state["screen"] = "results"
             st.session_state["scroll_top"] = True
             st.rerun()
-
-    if not can_calc:
-        st.caption(f":grey[Answer all {total_q} questions to calculate your score.]")
 
 
 # ===========================================================================
@@ -557,19 +797,19 @@ def _score_item_html(icon: str, big: str, small: str, name: str, *, total: bool)
     )
 
 
-def render_equation_block(answers: dict, total: int, lvl: dict) -> None:
+def render_equation_block(answers: dict, total: int, lvl: dict, lang: str) -> None:
     raws = {p: sum(answers[p]) for p in PILLARS}
 
     items = [
         _score_item_html(
-            "🛫", f"{total}", "/54", f"YOUR READINESS — {lvl['name']}", total=True
+            "🛫", f"{total}", f"/{TOTAL_MAX}", f"{t(lang, 'your_readiness')} — {lvl['name']}", total=True
         )
     ]
     for pillar in PILLARS:
         pmax = pillar_max(pillar)
         items.append(
             _score_item_html(
-                PILLAR_ICONS[pillar], f"{raws[pillar]}", f"/{pmax}", pillar, total=False
+                PILLAR_ICONS[pillar], f"{raws[pillar]}", f"/{pmax}", PILLAR_NAMES[lang][pillar], total=False
             )
         )
 
@@ -581,101 +821,116 @@ def render_equation_block(answers: dict, total: int, lvl: dict) -> None:
     st.markdown(html, unsafe_allow_html=True)
 
 
-def render_radar(answers: dict) -> None:
-    pcts = [sum(answers[p]) / pillar_max(p) * 100 for p in PILLARS]
-    # Short vertex labels, each carrying its pillar icon.
-    short = ["Data", "Infrastructure", "Investment &<br>Prioritization",
-             "Change<br>Management", "Operational<br>Control & CI"]
-    labels = [f"{PILLAR_ICONS[p]}<br>{s}" for p, s in zip(PILLARS, short)]
+def _hex_to_rgba(hex_color: str, alpha: float) -> str:
+    hex_color = hex_color.lstrip("#")
+    r, g, b = (int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+    return f"rgba({r},{g},{b},{alpha})"
 
-    # Close the polygon.
-    r = pcts + [pcts[0]]
-    theta = labels + [labels[0]]
-    text = [f"{v:.0f}%" for v in pcts] + [f"{pcts[0]:.0f}%"]
+
+def render_radar(answers: dict, lang: str) -> None:
+    """Polar bar chart: each dimension is a pie wedge (no gap between them,
+    each in its own color) whose radius — 0 at the center, 5 at the outer
+    ring — encodes that dimension's score, against a white/black grid."""
+    n = len(PILLARS)
+    sector = 360 / n
+    centers = [i * sector for i in range(n)]
+
+    values = [sum(answers[p]) for p in PILLARS]  # raw 0-5 score per pillar
+    labels = [f"{PILLAR_ICONS[p]}<br>{PILLAR_NAMES[lang][p]}" for p in PILLARS]
+    fill_colors = [_hex_to_rgba(PILLAR_COLORS[p], 0.6) for p in PILLARS]
+    line_colors = [PILLAR_COLORS[p] for p in PILLARS]
 
     fig = go.Figure()
     fig.add_trace(
-        go.Scatterpolar(
-            r=r,
-            theta=theta,
-            fill="toself",
-            fillcolor="rgba(123,155,201,0.5)",
-            line=dict(color=PRIMARY, width=2),
-            mode="lines+markers+text",
-            text=text,
-            textposition="top center",
-            textfont=dict(size=13, color="#33455e"),
-            hovertemplate="%{theta}: %{r:.0f}%<extra></extra>",
+        go.Barpolar(
+            r=values,
+            theta=centers,
+            width=[sector] * n,  # no gap — wedges touch edge to edge
+            marker_color=fill_colors,
+            marker_line_color=line_colors,
+            marker_line_width=2,
+            customdata=[PILLAR_NAMES[lang][p] for p in PILLARS],
+            hovertemplate="%{customdata}: %{r}/5<extra></extra>",
+            showlegend=False,
         )
     )
     fig.update_layout(
         polar=dict(
             radialaxis=dict(
-                range=[0, 100],
-                tickvals=[20, 40, 60, 80, 100],
-                ticksuffix="%",
-                gridcolor="#D7DEE9",
+                range=[0, 5],
+                tickvals=[1, 2, 3, 4, 5],
+                showticklabels=True,
+                gridcolor="#DDDDDD",
+                linecolor="#DDDDDD",
+                tickfont=dict(size=11, color="#000000"),
             ),
             angularaxis=dict(
-                gridcolor="#D7DEE9",
-                tickfont=dict(size=17, color="#333"),
+                tickmode="array",
+                tickvals=centers,
+                ticktext=labels,
+                direction="clockwise",
+                rotation=90,
+                gridcolor="#DDDDDD",
+                linecolor="#DDDDDD",
+                tickfont=dict(size=15, color="#000000"),
             ),
-            bgcolor="rgba(0,0,0,0)",
+            bgcolor="#FFFFFF",
         ),
         showlegend=False,
         margin=dict(l=80, r=80, t=50, b=50),
         height=460,
-        paper_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="#FFFFFF",
     )
     st.plotly_chart(fig, use_container_width=True)
 
 
-def render_level_table(lvl: dict) -> None:
+def render_level_table(lvl: dict, lang: str) -> None:
     rows = []
-    for L in LEVELS:
-        achieved = L["num"] == lvl["num"]
-        pts = f"{L['min']}–{L['max']}"
+    for meta in LEVELS_META:
+        text = LEVELS_TEXT[lang][meta["num"]]
+        achieved = meta["num"] == lvl["num"]
+        pts = f"{meta['min']}–{meta['max']}"
         if achieved:
             rows.append(
                 f'<tr style="background:{CAPSULE_FILL};font-weight:700;">'
                 f'<td style="padding:6px 10px;">{pts}</td>'
-                f'<td style="padding:6px 10px;">L{L["num"]}</td>'
-                f'<td style="padding:6px 10px;">{L["name"]}</td></tr>'
+                f'<td style="padding:6px 10px;">L{meta["num"]}</td>'
+                f'<td style="padding:6px 10px;">{text["name"]}</td></tr>'
             )
         else:
             rows.append(
                 f'<tr><td style="padding:6px 10px;color:#555;">{pts}</td>'
-                f'<td style="padding:6px 10px;color:#555;">L{L["num"]}</td>'
-                f'<td style="padding:6px 10px;color:#555;">{L["name"]}</td></tr>'
+                f'<td style="padding:6px 10px;color:#555;">L{meta["num"]}</td>'
+                f'<td style="padding:6px 10px;color:#555;">{text["name"]}</td></tr>'
             )
     table = (
         '<table style="border-collapse:collapse;width:100%;font-size:0.92rem;">'
         '<thead><tr style="border-bottom:2px solid #ccc;">'
-        '<th style="text-align:left;padding:6px 10px;">Points</th>'
-        '<th style="text-align:left;padding:6px 10px;">Level</th>'
-        '<th style="text-align:left;padding:6px 10px;">Level Name</th>'
+        f'<th style="text-align:left;padding:6px 10px;">{t(lang, "points")}</th>'
+        f'<th style="text-align:left;padding:6px 10px;">{t(lang, "level")}</th>'
+        f'<th style="text-align:left;padding:6px 10px;">{t(lang, "level_name_col")}</th>'
         "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
     )
     st.markdown(table, unsafe_allow_html=True)
 
 
-def render_overview_tab(answers: dict, total: int, lvl: dict) -> None:
-    st.markdown("#### Your readiness equation")
-    render_equation_block(answers, total, lvl)
+def render_overview_tab(answers: dict, total: int, lvl: dict, lang: str) -> None:
+    st.markdown(t(lang, "readiness_eq"))
+    render_equation_block(answers, total, lvl, lang)
     st.divider()
 
-    st.markdown("#### A snapshot of your maturity level")
-    render_radar(answers)
+    st.markdown(t(lang, "snapshot"))
+    render_radar(answers, lang)
     st.divider()
 
-    st.markdown("#### Your level")
+    st.markdown(t(lang, "your_level"))
     c1, c2 = st.columns([1, 1.3])
     with c1:
-        render_level_table(lvl)
+        render_level_table(lvl, lang)
     with c2:
         st.markdown(
             f'<div style="font-size:1.15rem;font-weight:700;color:{PRIMARY};">'
-            f'Level {lvl["num"]} — {lvl["name"]}</div>',
+            f'{t(lang, "level_header", num=lvl["num"], name=lvl["name"])}</div>',
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -712,27 +967,24 @@ def _stepper_step_html(step: dict, state: str) -> str:
     )
 
 
-def render_recommendations_tab(answers: dict) -> None:
-    st.markdown(
-        "Based on your scores, here's the maturity ladder for each pillar. "
-        "✅ Achieved  ·  ▶️ Your next move  ·  ○ Future targets."
-    )
+def render_recommendations_tab(answers: dict, lang: str) -> None:
+    st.markdown(t(lang, "reco_intro"))
 
     # Track FactoryOS acceleration data while rendering ladders.
     forward_total = 0
     accelerated: dict[str, list[dict]] = {}
 
     for pillar in PILLARS:
-        raw = sum(answers[pillar])
-        p_level = get_pillar_level(raw, pillar_max(pillar))
-        steps = RECOMMENDATIONS[pillar]
+        p_level = sum(answers[pillar])  # answers[pillar] is a 1-item list holding the selected level
+        steps = get_pillar_steps(lang, pillar)
+        p_level_name = PILLAR_LEVELS[lang][pillar][p_level]["name"]
 
-        st.markdown(f"### {pillar} — Level {p_level} ({level_name(p_level)})")
+        st.markdown(
+            f"### {t(lang, 'pillar_level_header', pillar=PILLAR_NAMES[lang][pillar], num=p_level, name=p_level_name)}"
+        )
 
         if p_level == 5:
-            st.markdown(
-                ':green[**You\'ve mastered this pillar. Focus on sustaining excellence.**]'
-            )
+            st.markdown(f":green[**{t(lang, 'mastered')}**]")
 
         html_steps = []
         for step_index, step in enumerate(steps):
@@ -761,25 +1013,24 @@ def render_recommendations_tab(answers: dict) -> None:
         f'<div style="background:#F7F9FC;border:1px solid #DCE6F2;border-radius:14px;'
         f'padding:22px 26px;">',
         f'<div style="font-size:1.35rem;font-weight:800;color:{PRIMARY};margin-bottom:6px;">'
-        f'How FactoryOS accelerates you</div>',
+        f'{t(lang, "factoryos_title")}</div>',
         f'<div style="font-size:1.02rem;color:#333;margin-bottom:14px;">'
-        f'<b>{accel_count}</b> of your <b>{forward_total}</b> remaining recommended '
-        f'actions can be accelerated with FactoryOS.</div>',
+        f'{t(lang, "factoryos_body", accel=accel_count, total=forward_total)}</div>',
     ]
 
     for pillar in PILLARS:
         if pillar not in accelerated:
             continue
         box.append(
-            f'<div style="font-weight:700;color:#1A1A1A;margin:10px 0 4px;">{pillar}</div>'
+            f'<div style="font-weight:700;color:#1A1A1A;margin:10px 0 4px;">{PILLAR_NAMES[lang][pillar]}</div>'
         )
         for step in accelerated[pillar]:
             if step["factory_os"] == "yes":
-                badge = ('<span style="background:#E8F5E9;color:#2E7D32;border-radius:8px;'
-                         'padding:2px 8px;font-size:0.72rem;font-weight:700;margin-left:8px;">Full</span>')
+                badge = (f'<span style="background:#E8F5E9;color:#2E7D32;border-radius:8px;'
+                         f'padding:2px 8px;font-size:0.72rem;font-weight:700;margin-left:8px;">{t(lang, "badge_full")}</span>')
             else:
-                badge = ('<span style="background:#FFF3E0;color:#E65100;border-radius:8px;'
-                         'padding:2px 8px;font-size:0.72rem;font-weight:700;margin-left:8px;">Partial</span>')
+                badge = (f'<span style="background:#FFF3E0;color:#E65100;border-radius:8px;'
+                         f'padding:2px 8px;font-size:0.72rem;font-weight:700;margin-left:8px;">{t(lang, "badge_partial")}</span>')
             box.append(
                 f'<div style="color:#333;font-size:0.94rem;margin:2px 0 2px 8px;">'
                 f'• {step["title"]}{badge}</div>'
@@ -789,10 +1040,12 @@ def render_recommendations_tab(answers: dict) -> None:
     st.markdown("".join(box), unsafe_allow_html=True)
 
     st.markdown("")
-    st.link_button("Learn more about FactoryOS →", "#", type="primary")
+    st.link_button(t(lang, "learn_more"), "#", type="primary")
 
 
 def render_results() -> None:
+    lang = st.session_state["lang"]
+
     # Jump to the top once, right after arriving from the questionnaire.
     if st.session_state.pop("scroll_top", False):
         scroll_to_top()
@@ -800,18 +1053,18 @@ def render_results() -> None:
     answers = st.session_state["answers"]
     profile = st.session_state["profile"]
     total = sum(sum(answers[p]) for p in PILLARS)
-    lvl = level_for_total(total)
+    lvl = get_level(total, lang)
 
-    st.markdown(f"## Results for {profile.get('name', '')} — {profile.get('company', '')}")
+    st.markdown(f"## {t(lang, 'results_for', name=profile.get('name', ''), company=profile.get('company', ''))}")
 
-    tab_overview, tab_reco = st.tabs(["Overview", "Recommendations"])
+    tab_overview, tab_reco = st.tabs([t(lang, "tab_overview"), t(lang, "tab_reco")])
     with tab_overview:
-        render_overview_tab(answers, total, lvl)
+        render_overview_tab(answers, total, lvl, lang)
     with tab_reco:
-        render_recommendations_tab(answers)
+        render_recommendations_tab(answers, lang)
 
     st.divider()
-    if st.button("Start Over"):
+    if st.button(t(lang, "start_over")):
         keep_ws = st.session_state.get("gs_worksheet")
         st.session_state.clear()
         if keep_ws is not None:
@@ -841,17 +1094,18 @@ def main() -> None:
     )
 
     init_state()
+    render_language_switcher()
+    lang = st.session_state["lang"]
 
     # Dev-only warning when Google Sheets isn't configured.
     if not _has_google_secrets():
-        st.sidebar.warning(
-            "⚠️ Dev mode: Google Sheets not configured. "
-            f"Submissions are being written to `{LOCAL_CSV}`."
-        )
+        st.sidebar.warning(t(lang, "dev_warning", csv=LOCAL_CSV))
 
     screen = st.session_state["screen"]
     if screen == "welcome":
         render_welcome()
+    elif screen == "motivation":
+        render_motivation()
     elif screen == "questions":
         render_questions()
     else:
