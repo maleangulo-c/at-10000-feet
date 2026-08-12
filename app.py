@@ -28,6 +28,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 import data_loader as dl
+from email_report import send_results_email
 from translations import (
     DIMENSION_ICONS,
     DIMENSION_NAMES,
@@ -321,6 +322,7 @@ def render_profile() -> None:
     email_ok = bool(EMAIL_RE.match(email.strip())) if email else False
     if email and not email_ok:
         st.caption(f":red[{t(lang, 'invalid_email')}]")
+    st.caption(t(lang, "email_consent_note"))
 
     all_filled = all(v.strip() for v in (name, company, email))
     can_continue = all_filled and email_ok
@@ -461,6 +463,8 @@ def render_assessment_step() -> None:
         if st.button(label, type="primary"):
             if is_last:
                 persist_submission(st.session_state["profile"], st.session_state["answers"], lang)
+                full_framework = dl.load_workbook_data()["framework"]
+                send_results_email(lang, st.session_state["profile"], st.session_state["answers"], full_framework)
                 st.session_state["screen"] = "results"
                 st.session_state["scroll_top"] = True
             else:

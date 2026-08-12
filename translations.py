@@ -354,6 +354,13 @@ UI: dict[str, dict[str, str]] = {
         "live_title": "🛫 Live Results — At 10,000 Feet",
         "live_count": "{count} submissions so far · refreshes automatically",
         "live_empty": "No submissions yet. This view refreshes automatically as people complete the assessment.",
+        "email_consent_note": "📧 We'll email your results to the address above.",
+        "email_subject": "Your At 10,000 Feet results are ready 🛫",
+        "email_greeting": "Hi {name},",
+        "email_intro": "Thanks for completing the assessment! Here's a summary of your results.",
+        "email_dimensions_title": "Your maturity by dimension",
+        "email_recommendations_title": "Your top recommended next steps",
+        "email_footer": "This email was sent automatically because you completed the At 10,000 Feet assessment at Foro MX 2026.",
     },
     "es": {
         "title": "A 10,000 Pies: ¿Qué Tan Listo Estás para la Transición Inteligente?",
@@ -423,6 +430,13 @@ UI: dict[str, dict[str, str]] = {
         "live_title": "🛫 Resultados en Vivo — At 10,000 Feet",
         "live_count": "{count} respuestas hasta ahora · se actualiza automáticamente",
         "live_empty": "Aún no hay respuestas. Esta vista se actualiza automáticamente conforme la gente completa la evaluación.",
+        "email_consent_note": "📧 Enviaremos tus resultados al correo indicado arriba.",
+        "email_subject": "Tus resultados de At 10,000 Feet ya están listos 🛫",
+        "email_greeting": "Hola {name},",
+        "email_intro": "¡Gracias por completar la evaluación! Aquí tienes un resumen de tus resultados.",
+        "email_dimensions_title": "Tu madurez por dimensión",
+        "email_recommendations_title": "Tus principales próximos pasos recomendados",
+        "email_footer": "Este correo se envió automáticamente porque completaste la evaluación At 10,000 Feet en Foro MX 2026.",
     },
 }
 
