@@ -390,6 +390,9 @@ div[data-testid="stButton"] button p {{
     text-align: left !important;
     white-space: normal !important;
 }}
+div[data-testid="stButton"] button[kind="primary"] * {{
+    color: #FFFFFF !important;
+}}
 </style>
 """
 
