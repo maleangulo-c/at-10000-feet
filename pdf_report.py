@@ -6,23 +6,24 @@ The layout mirrors the "Overview" / "Next Steps" tabs in app.py as closely as
 a static PDF allows: a native vector-drawn radar chart (same geometry as the
 Plotly chart in render_radar — drawn with fpdf2 primitives rather than
 exporting the Plotly figure, so the PDF has no dependency on a headless
-browser/Kaleido at render time), a bordered KPI table, and colored
-current/target level cards for the top recommendations.
+browser/Kaleido at render time), a bordered KPI table, colored current/target
+level cards for the top recommendations, and a customer-stories section.
 
-Typography is Montserrat (bundled under fonts/, SIL Open Font License) at a
-fixed two-size system — 12pt body, 14pt bold titles — with 2.54cm margins on
-all four sides. Colors come from the brand palette in _palette below.
+Typography is core Helvetica (no embedded font — smaller file, no extra
+assets) at a compact, per-element size scale so the Overview page (radar +
+per-dimension summary + savings table) and the Next Steps page each fit on a
+single sheet. Margins are 2.54cm on all four sides; colors come from the
+brand palette below.
 
 Framework content (dimension levels, solutions) is read straight from the
 workbook via data_loader.py, exactly like app.py; the ranking/solution-pick
-logic is duplicated from app.py rather than imported, to avoid a circular
-import (app.py imports this module).
+and customer-story dedup logic is duplicated from app.py rather than
+imported, to avoid a circular import (app.py imports this module).
 """
 
 from __future__ import annotations
 
 import math
-import os
 
 from fpdf import FPDF
 
@@ -45,13 +46,14 @@ RED_RGB = (253, 2, 0)          # fd0200 — MVS benchmark line
 GREEN_RGB = (141, 199, 63)     # 8dc73f — "next target" accent
 NAVY_RGB = (0, 64, 142)        # 00408e — primary / titles / current-state line
 SKY_RGB = (49, 188, 235)       # 31bceb — "current level" accent
-GRAY_BG_RGB = (219, 218, 216)  # dbdad8 — neutral fills
+GRAY_BG_RGB = (248, 249, 250)  # F8F9FA — neutral fills (category bars, contact box)
 
 PRIMARY_RGB = NAVY_RGB
 REFERENCE_RED_RGB = RED_RGB
 BODY_TEXT_RGB = (35, 35, 35)
 GRAY_RGB = (105, 103, 101)
 LIGHT_FILL_RGB = GRAY_BG_RGB
+CONTACT_BG_RGB = GRAY_BG_RGB
 BORDER_GRAY_RGB = (188, 186, 184)
 RADAR_TRACK_RGB = (203, 201, 199)
 NOT_ASSESSED_RGB = (150, 150, 150)
@@ -60,18 +62,7 @@ PALE_SKY_RGB = (223, 246, 252)
 GREEN_BG_RGB = (234, 244, 219)
 GREEN_TEXT_RGB = (64, 96, 27)
 
-# ===========================================================================
-# Typography — Montserrat, two sizes only: 12pt body, 14pt bold titles.
-# ===========================================================================
-FONT_FAMILY = "Montserrat"
-FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
-FONT_FILES = {
-    "": os.path.join(FONT_DIR, "Montserrat-Regular.ttf"),
-    "B": os.path.join(FONT_DIR, "Montserrat-Bold.ttf"),
-    "I": os.path.join(FONT_DIR, "Montserrat-Italic.ttf"),
-}
-BODY_SIZE = 12
-TITLE_SIZE = 14
+FONT_FAMILY = "helvetica"
 
 # ===========================================================================
 # Page geometry — 2.54cm (1 in) margins on all four sides.
@@ -81,19 +72,39 @@ PAGE_HEIGHT = 297
 MARGIN = 25.4
 CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN
 
+CONTACT_EMAIL = "contacto@factoryos.com"  # placeholder — swap for the real address
+NEXT_STEPS_TITLE = {
+    "en": "Next steps by priority category and recommended solutions",
+    "es": "Próximos pasos por categoría priorizada y soluciones recomendadas",
+}
+CONTACT_BOX_TEXT = {
+    "en": f"For more information on implementing these solutions with FactoryOS, write to {CONTACT_EMAIL}",
+    "es": f"Para más información sobre cómo implementar estas soluciones con FactoryOS escribe a {CONTACT_EMAIL}",
+}
+STORIES_LINK_HINT = {
+    "en": "Tip: Cmd/Ctrl + click a link to open it in a new tab without losing this PDF.",
+    "es": "Tip: usa Cmd/Ctrl + clic sobre un enlace para abrirlo en una pestaña nueva sin perder este PDF.",
+}
+
 
 def _safe(text: str) -> str:
-    """Montserrat covers the full Latin-1 range plus the typographic glyphs
-    (—, arrows) used in the app's UI strings, so this mainly guards against
-    emoji and other characters the font simply doesn't ship."""
+    """Core Helvetica only supports Latin-1 — swap the handful of
+    non-Latin-1 glyphs the app's UI strings use (arrows, checkmarks, emoji,
+    markdown bold markers) for ASCII, then drop anything else that still
+    doesn't fit rather than raising mid-render."""
     if not text:
         return ""
-    text = text.replace("🛫", "").replace("ℹ️", "").replace("✅", "-").replace("**", "")
-    try:
-        text.encode("utf-8")
-    except UnicodeEncodeError:
-        text = text.encode("ascii", "ignore").decode("ascii")
-    return text
+    text = (
+        text.replace("→", "->")
+        .replace("←", "<-")
+        .replace("✅", "-")
+        .replace("🛫", "")
+        .replace("ℹ️", "")
+        .replace("—", " - ")
+        .replace("–", "-")
+        .replace("**", "")
+    )
+    return text.encode("latin-1", "ignore").decode("latin-1")
 
 
 def _top_recommendations(answers: dict) -> list[dict]:
@@ -107,21 +118,23 @@ def _top_recommendations(answers: dict) -> list[dict]:
     ]
 
 
-def _solutions_for(framework: dict, dim: str, target_level: int) -> list[dict]:
-    """Same top-up logic as app.get_solutions_for_target."""
+def _solutions_for(framework: dict, dim: str, target_level: int, limit: int = 3) -> list[dict]:
+    """Same top-up logic as app.get_solutions_for_target, capped at `limit`
+    (3 here, vs. up to 5 on the results page) to keep the PDF's Next Steps
+    section to a single page."""
     solutions_bank = dl.load_workbook_data()["solutions_bank"]
     sols = list(framework[dim]["solutions"].get(target_level, []))
     seen_names = {s["name"] for s in sols}
 
-    if len(sols) < 3:
+    if len(sols) < limit:
         for name in FALLBACK_SOLUTIONS.get(dim, []):
             if name not in seen_names:
                 sols.append({"name": name, "vp": None})
                 seen_names.add(name)
-            if len(sols) >= 3:
+            if len(sols) >= limit:
                 break
 
-    if len(sols) < 3:
+    if len(sols) < limit:
         for lvl in sorted(framework[dim]["solutions"].keys()):
             if lvl == target_level:
                 continue
@@ -129,17 +142,47 @@ def _solutions_for(framework: dict, dim: str, target_level: int) -> list[dict]:
                 if s["name"] not in seen_names:
                     sols.append(s)
                     seen_names.add(s["name"])
-                if len(sols) >= 3:
+                if len(sols) >= limit:
                     break
-            if len(sols) >= 3:
+            if len(sols) >= limit:
                 break
 
     out = []
-    for s in sols[:5]:
+    for s in sols[:limit]:
         bank_entry = solutions_bank.get(s["name"], {})
         vp = s.get("vp") or bank_entry.get("vp") or ""
         out.append({"name": s["name"], "vp": vp})
     return out
+
+
+def _top_stories(answers: dict, food_category: str, max_total: int = 6) -> list[dict]:
+    """Same ranking + cross-dimension dedup as app.render_stories_tab."""
+    all_stories = dl.load_workbook_data()["customer_stories"]
+    top = _top_recommendations(answers)
+    seen: set[str] = set()
+    picked: list[dict] = []
+    for rec in top:
+        if len(picked) >= max_total:
+            break
+        dim = rec["dimension"]
+        bucket = "1-2" if rec["current"] <= 2 else ("3" if rec["current"] == 3 else "4-5")
+        candidates = [s for s in all_stories if s["dimension"] == dim and s["customer"] not in seen]
+
+        def _score(s: dict) -> tuple:
+            cat_match = s["food_category"].strip().lower() == food_category.strip().lower()
+            bucket_match = s["maturity_bucket"] == bucket
+            return (cat_match, bucket_match)
+
+        picked_for_dim = 0
+        for s in sorted(candidates, key=_score, reverse=True):
+            if s["customer"] in seen:
+                continue
+            seen.add(s["customer"])
+            picked.append(s)
+            picked_for_dim += 1
+            if picked_for_dim >= 2 or len(picked) >= max_total:
+                break
+    return picked
 
 
 class _ReportPDF(FPDF):
@@ -148,14 +191,9 @@ class _ReportPDF(FPDF):
 
     def footer(self) -> None:  # fpdf2 hook — stays inside the bottom margin
         self.set_y(-MARGIN + 4)
-        self.set_font(FONT_FAMILY, "", BODY_SIZE - 3)
+        self.set_font(FONT_FAMILY, "", 8)
         self.set_text_color(*GRAY_RGB)
         self.cell(0, 6, f"{self.page_no()}", align="C")
-
-
-def _register_fonts(pdf: FPDF) -> None:
-    for style, path in FONT_FILES.items():
-        pdf.add_font(FONT_FAMILY, style, path)
 
 
 def _ensure_space(pdf: FPDF, needed_h: float) -> None:
@@ -178,12 +216,12 @@ def _mc(pdf: FPDF, w: float, h: float, text: str, **kwargs) -> None:
 
 
 def _section_title(pdf: FPDF, text: str) -> None:
-    pdf.ln(3)
-    pdf.set_font(FONT_FAMILY, "B", TITLE_SIZE)
+    pdf.ln(2.5)
+    pdf.set_font(FONT_FAMILY, "B", 13)
     pdf.set_text_color(*NAVY_RGB)
-    pdf.cell(0, 8, _safe(text), new_x="LMARGIN", new_y="NEXT")
+    _mc(pdf, CONTENT_WIDTH, 6.2, _safe(text))
     pdf.set_text_color(*BODY_TEXT_RGB)
-    pdf.ln(1)
+    pdf.ln(0.5)
 
 
 # ===========================================================================
@@ -194,11 +232,11 @@ def _section_title(pdf: FPDF, text: str) -> None:
 def _draw_radar_chart(pdf: FPDF, lang: str, answers: dict, framework: dict) -> None:
     dims = dl.DIMENSIONS
     n = len(dims)
-    radius = 32.0
+    radius = 24.0
     cx = MARGIN + CONTENT_WIDTH / 2
-    top_pad = 4
-    _ensure_space(pdf, top_pad + radius * 2 + 26)
-    cy = pdf.get_y() + top_pad + radius + 8
+    top_pad = 8  # extra breathing room between the section title and the chart
+    _ensure_space(pdf, top_pad + radius * 2 + 22)
+    cy = pdf.get_y() + top_pad + radius + 7
 
     def angle_for(i: int) -> float:
         return math.radians(90 - (360 / n) * i)
@@ -223,7 +261,7 @@ def _draw_radar_chart(pdf: FPDF, lang: str, answers: dict, framework: dict) -> N
     def _draw_polygon(values: list[float], color: tuple[int, int, int]) -> list[tuple[float, float]]:
         pts = [pt(i, values[i]) for i in range(n)]
         pdf.set_draw_color(*color)
-        pdf.set_line_width(0.7)
+        pdf.set_line_width(0.6)
         for i in range(n):
             x1, y1 = pts[i]
             x2, y2 = pts[(i + 1) % n]
@@ -234,31 +272,31 @@ def _draw_radar_chart(pdf: FPDF, lang: str, answers: dict, framework: dict) -> N
     mvs_pts = _draw_polygon(mvs_vals, REFERENCE_RED_RGB)
     pdf.set_fill_color(*REFERENCE_RED_RGB)
     for x, y in mvs_pts:
-        pdf.ellipse(x - 1.3, y - 1.3, 2.6, 2.6, style="F")
+        pdf.ellipse(x - 1.1, y - 1.1, 2.2, 2.2, style="F")
 
     cur_vals = [answers.get(d, 0) for d in dims]
     cur_pts = _draw_polygon(cur_vals, PRIMARY_RGB)
     for i, (x, y) in enumerate(cur_pts):
         color = NOT_ASSESSED_RGB if cur_vals[i] == 0 else PRIMARY_RGB
         pdf.set_fill_color(*color)
-        pdf.ellipse(x - 1.3, y - 1.3, 2.6, 2.6, style="F")
+        pdf.ellipse(x - 1.1, y - 1.1, 2.2, 2.2, style="F")
 
     # Axis labels
-    pdf.set_font(FONT_FAMILY, "B", BODY_SIZE - 2)
+    pdf.set_font(FONT_FAMILY, "B", 7.5)
     pdf.set_text_color(*NAVY_RGB)
     for i, dim in enumerate(dims):
-        lx, ly = pt(i, 6.7)
+        lx, ly = pt(i, 6.5)
         name = _safe(DIMENSION_NAMES[lang][dim])
         w = pdf.get_string_width(name) + 2
-        pdf.set_xy(lx - w / 2, ly - 2.6)
-        pdf.cell(w, 5.2, name, align="C")
+        pdf.set_xy(lx - w / 2, ly - 2.3)
+        pdf.cell(w, 4.6, name, align="C")
     pdf.set_text_color(*BODY_TEXT_RGB)
 
     # Legend
-    legend_y = cy + radius + 11
-    pdf.set_font(FONT_FAMILY, "", BODY_SIZE - 2)
+    legend_y = cy + radius + 9
+    pdf.set_font(FONT_FAMILY, "", 8.5)
     legend_items = [(t(lang, "series_mvs"), REFERENCE_RED_RGB), (t(lang, "series_current"), PRIMARY_RGB)]
-    swatch, gap, item_gap = 3.6, 2, 12
+    swatch, gap, item_gap = 3.2, 2, 10
     widths = [swatch + gap + pdf.get_string_width(_safe(txt)) + 2 for txt, _ in legend_items]
     total_w = sum(widths) + item_gap * (len(legend_items) - 1)
     x = cx - total_w / 2
@@ -266,10 +304,10 @@ def _draw_radar_chart(pdf: FPDF, lang: str, answers: dict, framework: dict) -> N
         pdf.set_fill_color(*color)
         pdf.rect(x, legend_y + 0.8, swatch, swatch, style="F")
         pdf.set_xy(x + swatch + gap, legend_y)
-        pdf.cell(w, 5.5, _safe(txt))
+        pdf.cell(w, 5, _safe(txt))
         x += w + item_gap
 
-    pdf.set_y(legend_y + 9)
+    pdf.set_y(legend_y + 7)
 
 
 # ===========================================================================
@@ -278,24 +316,24 @@ def _draw_radar_chart(pdf: FPDF, lang: str, answers: dict, framework: dict) -> N
 # ===========================================================================
 def _draw_kpi_table(pdf: FPDF, lang: str, answers: dict, framework: dict, food_category: str) -> None:
     savings = dl.savings_row_for_category(dl.load_workbook_data()["mvs_savings"], food_category)
-    col1_w = CONTENT_WIDTH * 0.62
+    col1_w = CONTENT_WIDTH * 0.66
     col2_w = CONTENT_WIDTH - col1_w
-    inner_pad = 2.6
-    label_h, desc_h, row_pad = 5.8, 5.2, 2.8
+    inner_pad = 2.2
+    label_h, desc_h, row_pad = 4.3, 3.6, 1.7
 
-    _ensure_space(pdf, 11)
+    _ensure_space(pdf, 9)
     pdf.set_fill_color(*LIGHT_FILL_RGB)
     pdf.set_draw_color(*BORDER_GRAY_RGB)
     pdf.set_line_width(0.2)
     header_y = pdf.get_y()
-    pdf.rect(MARGIN, header_y, CONTENT_WIDTH, 9, style="DF")
-    pdf.set_font(FONT_FAMILY, "B", BODY_SIZE)
+    pdf.rect(MARGIN, header_y, CONTENT_WIDTH, 7, style="DF")
+    pdf.set_font(FONT_FAMILY, "B", 9.5)
     pdf.set_text_color(*NAVY_RGB)
-    pdf.set_xy(MARGIN + inner_pad, header_y + 1.8)
-    pdf.cell(col1_w - inner_pad, 5.5, _safe(t(lang, "savings_kpi_col")))
-    pdf.set_xy(MARGIN + col1_w + inner_pad, header_y + 1.8)
-    pdf.cell(col2_w - inner_pad, 5.5, _safe(t(lang, "savings_value_col")))
-    pdf.set_y(header_y + 9)
+    pdf.set_xy(MARGIN + inner_pad, header_y + 1.4)
+    pdf.cell(col1_w - inner_pad, 4.5, _safe(t(lang, "savings_kpi_col")))
+    pdf.set_xy(MARGIN + col1_w + inner_pad, header_y + 1.4)
+    pdf.cell(col2_w - inner_pad, 4.5, _safe(t(lang, "savings_value_col")))
+    pdf.set_y(header_y + 7)
 
     for kpi in ["oee", "quality", "energy", "stock"]:
         relevant = KPI_DIMENSIONS[kpi]
@@ -311,11 +349,11 @@ def _draw_kpi_table(pdf: FPDF, lang: str, answers: dict, framework: dict, food_c
         desc = _safe(KPI_DESCRIPTIONS[lang][kpi])
         value_safe = _safe(str(value))
 
-        pdf.set_font(FONT_FAMILY, "B", BODY_SIZE)
+        pdf.set_font(FONT_FAMILY, "B", 9.5)
         label_lines = pdf.multi_cell(col1_w - 2 * inner_pad, label_h, label, split_only=True)
-        pdf.set_font(FONT_FAMILY, "", BODY_SIZE)
+        pdf.set_font(FONT_FAMILY, "", 7.8)
         desc_lines = pdf.multi_cell(col1_w - 2 * inner_pad, desc_h, desc, split_only=True)
-        pdf.set_font(FONT_FAMILY, "B", BODY_SIZE)
+        pdf.set_font(FONT_FAMILY, "B", 9.5)
         value_lines = pdf.multi_cell(col2_w - 2 * inner_pad, label_h, value_safe, split_only=True)
         col1_h = len(label_lines) * label_h + len(desc_lines) * desc_h
         col2_h = len(value_lines) * label_h
@@ -329,16 +367,16 @@ def _draw_kpi_table(pdf: FPDF, lang: str, answers: dict, framework: dict, food_c
         pdf.line(MARGIN + col1_w, row_y, MARGIN + col1_w, row_y + row_h)
 
         pdf.set_xy(MARGIN + inner_pad, row_y + row_pad)
-        pdf.set_font(FONT_FAMILY, "B", BODY_SIZE)
+        pdf.set_font(FONT_FAMILY, "B", 9.5)
         pdf.set_text_color(*BODY_TEXT_RGB)
         _mc(pdf, col1_w - 2 * inner_pad, label_h, label, new_x="LEFT")
         pdf.set_x(MARGIN + inner_pad)
-        pdf.set_font(FONT_FAMILY, "", BODY_SIZE)
+        pdf.set_font(FONT_FAMILY, "", 7.8)
         pdf.set_text_color(*GRAY_RGB)
         _mc(pdf, col1_w - 2 * inner_pad, desc_h, desc, new_x="LEFT")
 
         pdf.set_xy(MARGIN + col1_w + inner_pad, row_y + row_pad)
-        pdf.set_font(FONT_FAMILY, "B", BODY_SIZE)
+        pdf.set_font(FONT_FAMILY, "B", 9.5)
         pdf.set_text_color(*NAVY_RGB)
         _mc(pdf, col2_w - 2 * inner_pad, label_h, value_safe, new_x="LEFT")
         pdf.set_text_color(*BODY_TEXT_RGB)
@@ -351,13 +389,14 @@ def _draw_kpi_table(pdf: FPDF, lang: str, answers: dict, framework: dict, food_c
 # the sky-blue "Current" / green "Next Target" cards on the results page.
 # ===========================================================================
 def _card_content_height(pdf: FPDF, card_w: float, label: str, lvl_num: int, name: str, desc: str) -> float:
-    pad = 4
+    pad = 3
     w_text = card_w - 2 * pad
-    pdf.set_font(FONT_FAMILY, "B", BODY_SIZE)
-    h1 = len(pdf.multi_cell(w_text, 5.6, _safe(f"{label}: {lvl_num}"), split_only=True)) * 5.6
-    h2 = len(pdf.multi_cell(w_text, 5.3, _safe(name), split_only=True)) * 5.3
-    pdf.set_font(FONT_FAMILY, "", BODY_SIZE)
-    h3 = len(pdf.multi_cell(w_text, 5.0, _safe(desc), split_only=True)) * 5.0
+    pdf.set_font(FONT_FAMILY, "B", 9.5)
+    h1 = len(pdf.multi_cell(w_text, 4.3, _safe(f"{label}: {lvl_num}"), split_only=True)) * 4.3
+    pdf.set_font(FONT_FAMILY, "B", 9.2)
+    h2 = len(pdf.multi_cell(w_text, 4.1, _safe(name), split_only=True)) * 4.1
+    pdf.set_font(FONT_FAMILY, "", 8)
+    h3 = len(pdf.multi_cell(w_text, 3.7, _safe(desc), split_only=True)) * 3.7
     return h1 + h2 + h3 + 2 * pad
 
 
@@ -368,25 +407,26 @@ def _draw_level_card(
 ) -> None:
     pdf.set_fill_color(*bg)
     pdf.set_draw_color(*border)
-    pdf.set_line_width(0.6)
-    pdf.rect(x, y, w, h, style="DF", round_corners=True, corner_radius=2.5)
+    pdf.set_line_width(0.5)
+    pdf.rect(x, y, w, h, style="DF", round_corners=True, corner_radius=2)
 
-    pad = 4
+    pad = 3
     w_text = w - 2 * pad
     pdf.set_text_color(*text_color)
     pdf.set_xy(x + pad, y + pad)
-    pdf.set_font(FONT_FAMILY, "B", BODY_SIZE)
-    _mc(pdf, w_text, 5.6, _safe(f"{label}: {lvl_num}"), new_x="LEFT")
+    pdf.set_font(FONT_FAMILY, "B", 9.5)
+    _mc(pdf, w_text, 4.3, _safe(f"{label}: {lvl_num}"), new_x="LEFT")
     pdf.set_x(x + pad)
-    _mc(pdf, w_text, 5.3, _safe(name), new_x="LEFT")
+    pdf.set_font(FONT_FAMILY, "B", 9.2)
+    _mc(pdf, w_text, 4.1, _safe(name), new_x="LEFT")
     pdf.set_x(x + pad)
-    pdf.set_font(FONT_FAMILY, "", BODY_SIZE)
-    _mc(pdf, w_text, 5.0, _safe(desc), new_x="LEFT")
+    pdf.set_font(FONT_FAMILY, "", 8)
+    _mc(pdf, w_text, 3.7, _safe(desc), new_x="LEFT")
     pdf.set_text_color(*BODY_TEXT_RGB)
 
 
 def _draw_current_target_cards(pdf: FPDF, lang: str, dim: str, rec: dict, framework: dict) -> None:
-    card_gap = 8
+    card_gap = 6
     card_w = (CONTENT_WIDTH - card_gap) / 2
     current_info = framework[dim]["levels"].get(rec["current"])
     target_info = framework[dim]["levels"].get(rec["target"])
@@ -402,9 +442,9 @@ def _draw_current_target_cards(pdf: FPDF, lang: str, dim: str, rec: dict, framew
             pdf, card_w, t(lang, "reco_target_label"), rec["target"],
             translate_fw(lang, target_info["name"]), translate_fw(lang, target_info["description"]),
         )
-    card_h = max(h_current, h_target, 18)
+    card_h = max(h_current, h_target, 14)
 
-    _ensure_space(pdf, card_h + 4)
+    _ensure_space(pdf, card_h + 3)
     y = pdf.get_y()
     if current_info:
         _draw_level_card(
@@ -424,33 +464,50 @@ def _draw_current_target_cards(pdf: FPDF, lang: str, dim: str, rec: dict, framew
         pdf.set_draw_color(*GRAY_RGB)
         pdf.set_line_width(0.4)
         ay = y + card_h / 2
-        pdf.line(MARGIN + card_w + 1.5, ay, x2 - 1.5, ay)
+        pdf.line(MARGIN + card_w + 1, ay, x2 - 1, ay)
 
-    pdf.set_y(y + card_h + 6)
+    pdf.set_y(y + card_h + 3.5)
+
+
+def _draw_contact_box(pdf: FPDF, lang: str) -> None:
+    text = _safe(CONTACT_BOX_TEXT[lang])
+    pdf.set_font(FONT_FAMILY, "B", 10)
+    lines = pdf.multi_cell(CONTENT_WIDTH - 12, 5, text, split_only=True)
+    box_h = len(lines) * 5 + 10
+    _ensure_space(pdf, box_h + 4)
+    y = pdf.get_y()
+    pdf.set_fill_color(*CONTACT_BG_RGB)
+    pdf.set_draw_color(*NAVY_RGB)
+    pdf.set_line_width(0.5)
+    pdf.rect(MARGIN, y, CONTENT_WIDTH, box_h, style="DF", round_corners=True, corner_radius=2)
+    pdf.set_xy(MARGIN + 6, y + 5)
+    pdf.set_text_color(*NAVY_RGB)
+    _mc(pdf, CONTENT_WIDTH - 12, 5, text, new_x="LEFT")
+    pdf.set_text_color(*BODY_TEXT_RGB)
+    pdf.set_y(y + box_h)
 
 
 def build_results_pdf(
     lang: str, profile: dict, answers: dict, framework: dict, food_category: str
 ) -> bytes:
     pdf = _ReportPDF(format="A4", unit="mm")
-    _register_fonts(pdf)
     pdf.set_auto_page_break(auto=True, margin=MARGIN)
     pdf.set_margins(MARGIN, MARGIN, MARGIN)
     pdf.add_page()
 
     # Title block (no full-bleed banner — everything stays inside the margins)
-    pdf.set_font(FONT_FAMILY, "B", TITLE_SIZE)
+    pdf.set_font(FONT_FAMILY, "B", 15)
     pdf.set_text_color(*NAVY_RGB)
-    _mc(pdf, CONTENT_WIDTH, 7, _safe(t(lang, "title")))
+    _mc(pdf, CONTENT_WIDTH, 6.5, _safe(t(lang, "title")))
     pdf.set_draw_color(*NAVY_RGB)
-    pdf.set_line_width(0.6)
+    pdf.set_line_width(0.4)
     pdf.line(MARGIN, pdf.get_y() + 1, MARGIN + CONTENT_WIDTH, pdf.get_y() + 1)
-    pdf.ln(5)
+    pdf.ln(3.5)
 
-    pdf.set_font(FONT_FAMILY, "B", BODY_SIZE)
+    pdf.set_font(FONT_FAMILY, "", 12)
     pdf.set_text_color(*BODY_TEXT_RGB)
     _mc(
-        pdf, CONTENT_WIDTH, 6.5,
+        pdf, CONTENT_WIDTH, 5.6,
         _safe(t(lang, "results_for", name=profile.get("name", ""), company=profile.get("company", ""))),
     )
 
@@ -466,75 +523,98 @@ def build_results_pdf(
         else:
             level_name = translate_fw(lang, framework[dim]["levels"][score]["name"])
             level_text = f"{score}/5 - {level_name}"
-        pdf.set_font(FONT_FAMILY, "", BODY_SIZE)
-        pdf.set_text_color(*GRAY_RGB)
-        _mc(
-            pdf, CONTENT_WIDTH, 5.6,
-            _safe(f"{DIMENSION_NAMES[lang][dim]} - {t(lang, 'series_current')}: {level_text} | {t(lang, 'series_mvs')}: {mvs}/5"),
+        line = _safe(
+            f"{DIMENSION_NAMES[lang][dim]} - {t(lang, 'series_current')}: {level_text} | {t(lang, 'series_mvs')}: {mvs}/5"
         )
+        pdf.set_font(FONT_FAMILY, "", 8.7)
+        while pdf.get_string_width(line) > CONTENT_WIDTH and len(line) > 20:
+            line = line[:-6].rstrip() + "..."
+        pdf.set_text_color(*GRAY_RGB)
+        pdf.cell(CONTENT_WIDTH, 4.6, line, new_x="LMARGIN", new_y="NEXT")
     pdf.set_text_color(*BODY_TEXT_RGB)
+    pdf.ln(3)
 
     # --- MVS savings opportunity ---------------------------------------------
     _section_title(pdf, t(lang, "savings_title").replace("#", "").strip())
-    pdf.set_font(FONT_FAMILY, "", BODY_SIZE)
+    pdf.set_font(FONT_FAMILY, "", 9)
     pdf.set_text_color(*GRAY_RGB)
-    _mc(pdf, CONTENT_WIDTH, 5.8, _safe(t(lang, "savings_caption", category=food_category)))
+    _mc(pdf, CONTENT_WIDTH, 4.6, _safe(t(lang, "savings_caption", category=food_category)))
     pdf.set_text_color(*BODY_TEXT_RGB)
-    pdf.ln(1)
+    pdf.ln(0.5)
 
     _draw_kpi_table(pdf, lang, answers, framework, food_category)
 
-    pdf.ln(2)
-    pdf.set_font(FONT_FAMILY, "I", BODY_SIZE - 1)
+    pdf.ln(1.5)
+    pdf.set_font(FONT_FAMILY, "I", 7.5)
     pdf.set_text_color(*GRAY_RGB)
-    _mc(pdf, CONTENT_WIDTH, 4.8, _safe(t(lang, "savings_footnote")))
+    _mc(pdf, CONTENT_WIDTH, 3.9, _safe(t(lang, "savings_footnote")))
     pdf.set_text_color(*BODY_TEXT_RGB)
 
-    # --- Next steps -----------------------------------------------------------
+    # --- Next steps -------------------------------------------------------------
     top = _top_recommendations(answers)
     if top:
-        _section_title(pdf, t(lang, "reco_title").replace("#", "").strip())
+        pdf.add_page()
+        _section_title(pdf, NEXT_STEPS_TITLE[lang])
+        pdf.ln(3)
         for idx, rec in enumerate(top):
             dim = rec["dimension"]
-            _ensure_space(pdf, 16)
+            bar_h = 8
+            _ensure_space(pdf, bar_h + 4)
+            bar_y = pdf.get_y()
             pdf.set_fill_color(*LIGHT_FILL_RGB)
-            pdf.set_font(FONT_FAMILY, "B", TITLE_SIZE)
+            pdf.rect(MARGIN, bar_y, CONTENT_WIDTH, bar_h, style="F", round_corners=True, corner_radius=2)
+            pdf.set_xy(MARGIN + 4, bar_y + 1.3)
+            pdf.set_font(FONT_FAMILY, "B", 11)
             pdf.set_text_color(*NAVY_RGB)
-            _mc(pdf, CONTENT_WIDTH, 8, _safe(DIMENSION_NAMES[lang][dim]), fill=True)
+            pdf.cell(CONTENT_WIDTH - 8, 5.5, _safe(DIMENSION_NAMES[lang][dim]))
             pdf.set_text_color(*BODY_TEXT_RGB)
+            pdf.set_y(bar_y + bar_h)
             pdf.ln(1.5)
 
             if rec["mastered"]:
-                pdf.set_font(FONT_FAMILY, "B", BODY_SIZE)
-                _mc(pdf, CONTENT_WIDTH, 6.5, _safe(t(lang, "reco_mastered_title")))
-                pdf.set_font(FONT_FAMILY, "", BODY_SIZE)
-                _mc(pdf, CONTENT_WIDTH, 5.8, _safe(translate_fw(lang, framework[dim]["next_step"])))
+                pdf.set_font(FONT_FAMILY, "B", 9.5)
+                _mc(pdf, CONTENT_WIDTH, 5, _safe(t(lang, "reco_mastered_title")))
+                pdf.set_font(FONT_FAMILY, "", 9)
+                _mc(pdf, CONTENT_WIDTH, 4.6, _safe(translate_fw(lang, framework[dim]["next_step"])))
             else:
                 _draw_current_target_cards(pdf, lang, dim, rec, framework)
 
-                solutions = _solutions_for(framework, dim, rec["target"])
+                solutions = _solutions_for(framework, dim, rec["target"], limit=3)
                 if solutions:
-                    pdf.set_font(FONT_FAMILY, "B", BODY_SIZE)
-                    _mc(pdf, CONTENT_WIDTH, 5.8, _safe(t(lang, "reco_solutions_heading")))
-                    pdf.ln(0.5)
+                    pdf.set_font(FONT_FAMILY, "B", 9.5)
+                    _mc(pdf, CONTENT_WIDTH, 4.6, _safe(t(lang, "reco_solutions_heading")))
                 for s in solutions:
-                    pdf.set_font(FONT_FAMILY, "B", BODY_SIZE)
-                    _mc(pdf, CONTENT_WIDTH, 5.8, _safe(f"- {s['name']}"))
+                    pdf.set_font(FONT_FAMILY, "B", 9)
+                    _mc(pdf, CONTENT_WIDTH, 4.4, _safe(f"- {s['name']}"))
                     if s["vp"]:
-                        pdf.set_font(FONT_FAMILY, "", BODY_SIZE)
+                        pdf.set_font(FONT_FAMILY, "", 8.3)
                         pdf.set_text_color(*GRAY_RGB)
-                        _mc(pdf, CONTENT_WIDTH, 5.4, _safe(translate_fw(lang, s["vp"])))
+                        _mc(pdf, CONTENT_WIDTH, 4.1, _safe(translate_fw(lang, s["vp"])))
                         pdf.set_text_color(*BODY_TEXT_RGB)
 
             if idx < len(top) - 1:
-                pdf.ln(2.5)
-                _ensure_space(pdf, 5)
-                y = pdf.get_y()
-                pdf.set_draw_color(*BORDER_GRAY_RGB)
-                pdf.set_line_width(0.2)
-                pdf.line(MARGIN, y, PAGE_WIDTH - MARGIN, y)
-                pdf.ln(4.5)
+                pdf.ln(4)
             else:
-                pdf.ln(3)
+                pdf.ln(2)
+
+    # --- Customer stories ---------------------------------------------------
+    stories = _top_stories(answers, food_category)
+    if stories:
+        pdf.add_page()
+        _section_title(pdf, t(lang, "stories_title").replace("#", "").strip())
+        pdf.set_font(FONT_FAMILY, "I", 8.5)
+        pdf.set_text_color(*GRAY_RGB)
+        _mc(pdf, CONTENT_WIDTH, 4.2, _safe(STORIES_LINK_HINT[lang]))
+        pdf.set_text_color(*BODY_TEXT_RGB)
+        pdf.ln(1.5)
+        pdf.set_font(FONT_FAMILY, "", 10)
+        for s in stories:
+            pdf.set_text_color(*NAVY_RGB)
+            _mc(pdf, CONTENT_WIDTH, 6, _safe(f"- {s['customer']}"), link=s["url"])
+        pdf.set_text_color(*BODY_TEXT_RGB)
+
+    # --- Contact box ----------------------------------------------------------
+    pdf.ln(6)
+    _draw_contact_box(pdf, lang)
 
     return bytes(pdf.output())

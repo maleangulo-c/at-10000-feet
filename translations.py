@@ -335,7 +335,7 @@ def translate_fw(lang: str, text: str) -> str:
 # ---------------------------------------------------------------------------
 UI: dict[str, dict[str, str]] = {
     "en": {
-        "title": "At 10,000 Feet: How Ready Are You to Unlock the Value of Digital Transformation?",
+        "title": "At 10,000 Feet: how ready are you to unlock the value of digital transformation?",
         "intro1": (
             "This self-assessment helps you understand your factory's readiness for "
             "digital transformation. In just a few minutes, you will assess your "
@@ -358,10 +358,12 @@ UI: dict[str, dict[str, str]] = {
         "motivation_question": "What is your biggest motivation to advance in the intelligent transition?",
         "motivation_optional": "(optional)",
         "motivation_placeholder": "Write your answer here...",
-        "investment_approach_question": "What is your current investment approach for automation and digital initiatives?",
+        "investment_approach_question": (
+            "What is your current investment approach for automation and digital "
+            "initiatives? Are investments primarily triggered by operational issues, "
+            "or guided by a clear vision and roadmap for future competitiveness?"
+        ),
         "investment_approach_placeholder": "Write your answer here...",
-        "investment_trigger_question": "Are investments primarily triggered by operational issues, or guided by a clear vision and roadmap for future competitiveness?",
-        "investment_trigger_placeholder": "Write your answer here...",
         "continue": "Continue",
         "back": "← Back",
         "step_of": "Step {step} of {total}",
@@ -373,27 +375,27 @@ UI: dict[str, dict[str, str]] = {
             "the statements fit, pick \"Don't know / Skip.\""
         ),
         "dont_know": "I don't know / I don't want to rate this dimension",
-        "level0_label": "Don't know / Skip",
+        "level0_label": "Don't know / skip",
         "level0_note": "This dimension will be excluded from the chart, MVS comparison and recommendations.",
-        "level_label": "Maturity Level",
-        "calc_score": "See My Results",
+        "level_label": "Maturity level",
+        "calc_score": "See my results",
         "results_for": "Results for {name} — {company}",
         "tab_overview": "Overview",
-        "tab_reco": "Next Steps",
-        "tab_stories": "Customer Stories",
-        "radar_title": "#### Your Current State vs. Industry Minimum Viable Status (MVS)",
-        "series_current": "Your Current State",
+        "tab_reco": "Next steps",
+        "tab_stories": "Customer stories",
+        "radar_title": "#### Your current state vs. industry minimum viable status (MVS)",
+        "series_current": "Your current state",
         "series_mvs": "Industry MVS",
         "not_assessed_note": "Dimensions marked as \"I don't know\" are excluded from the chart and calculations.",
-        "mvs_info_title": "ℹ️ What is the Minimum Viable Status (MVS)?",
+        "mvs_info_title": "ℹ️ What is the minimum viable status (MVS)?",
         "mvs_info_body": (
             "A World Economic Forum benchmark defining the minimum maturity level needed "
             "to remain competitive in your industry."
         ),
-        "savings_title": "#### Potential Improvement Opportunity from Reaching MVS",
+        "savings_title": "#### Potential improvement opportunity from reaching MVS",
         "savings_caption": "Indicative estimates for **{category}** segment:",
         "savings_kpi_col": "KPI",
-        "savings_value_col": "Improvement to Reach MVS",
+        "savings_value_col": "Improvement to reach MVS",
         "already_at_mvs": "Already at or above MVS",
         "not_assessed_kpi": "Not assessed — excluded",
         "savings_footnote": (
@@ -402,29 +404,29 @@ UI: dict[str, dict[str, str]] = {
             "for their digital performance. It currently includes 220+ sites "
             "across 30+ countries and 40+ industries."
         ),
-        "reco_title": "### Top Recommended Improvement Areas & Solutions",
+        "reco_title": "### Top recommended improvement areas & solutions",
         "reco_need_assessment": "Rate at least one dimension to see recommendations.",
         "reco_level_transition": "Level {current} → Level {target}",
-        "reco_current_label": "Current Level",
-        "reco_target_label": "Next Target",
-        "reco_solutions_heading": "Recommended Solutions to Help You Move Forward",
-        "reco_mastered_title": "You've reached Level 5 — Next step",
+        "reco_current_label": "Current level",
+        "reco_target_label": "Next target",
+        "reco_solutions_heading": "Recommended solutions to help you move forward",
+        "reco_mastered_title": "You've reached level 5 — next step",
         "solutions_none": "No specific solutions mapped yet for this level — check back soon.",
-        "stories_title": "### Customer Success Stories",
+        "stories_title": "### Customer success stories",
         "stories_none": "No specific case studies found for your recommended dimensions yet.",
-        "start_over": "Start Over",
-        "edit_answers": "← Edit My Answers",
-        "download_pdf": "⬇️ Download My Results (PDF)",
+        "start_over": "Start over",
+        "edit_answers": "← Edit my answers",
+        "download_pdf": "⬇️ Download my results (PDF)",
         "dev_warning": (
             "⚠️ Dev mode: Google Sheets not configured. "
             "Submissions are being written to `{csv}`."
         ),
-        "live_title": "🛫 Live Results — At 10,000 Feet",
+        "live_title": "🛫 Live results — At 10,000 Feet",
         "live_count": "{count} submissions so far · refreshes automatically",
         "live_empty": "No submissions yet. This view refreshes automatically as people complete the assessment.",
     },
     "es": {
-        "title": "A 10,000 Pies: ¿Qué Tan Listo Estás para Desbloquear el Valor de la Transformación Digital?",
+        "title": "A 10,000 Pies: ¿qué tan listo estás para desbloquear el valor de la transformación digital?",
         "intro1": (
             "Esta autoevaluación te ayuda a entender qué tan lista está tu planta para "
             "la transformación digital. En solo unos minutos, evaluarás tu madurez en "
@@ -447,10 +449,13 @@ UI: dict[str, dict[str, str]] = {
         "motivation_question": "¿Cuál es tu mayor motivación para avanzar en la transición inteligente?",
         "motivation_optional": "(opcional)",
         "motivation_placeholder": "Escribe tu respuesta aquí...",
-        "investment_approach_question": "¿Cuál es tu enfoque actual de inversión en automatización e iniciativas digitales?",
+        "investment_approach_question": (
+            "¿Cuál es tu enfoque actual de inversión en automatización e iniciativas "
+            "digitales? ¿Las inversiones se disparan principalmente por problemas "
+            "operativos, o se guían por una visión clara y una hoja de ruta para la "
+            "competitividad futura?"
+        ),
         "investment_approach_placeholder": "Escribe tu respuesta aquí...",
-        "investment_trigger_question": "¿Las inversiones se disparan principalmente por problemas operativos, o se guían por una visión clara y una hoja de ruta para la competitividad futura?",
-        "investment_trigger_placeholder": "Escribe tu respuesta aquí...",
         "continue": "Continuar",
         "back": "← Atrás",
         "step_of": "Paso {step} de {total}",
@@ -462,27 +467,27 @@ UI: dict[str, dict[str, str]] = {
             "opción aplica, elige \"No sé / Omitir\"."
         ),
         "dont_know": "No sé / no quiero calificar esta dimensión",
-        "level0_label": "No sé / Omitir",
+        "level0_label": "No sé / omitir",
         "level0_note": "Esta dimensión se excluirá de la gráfica, la comparación con el MVS y las recomendaciones.",
-        "level_label": "Nivel de Madurez",
-        "calc_score": "Ver Mis Resultados",
+        "level_label": "Nivel de madurez",
+        "calc_score": "Ver mis resultados",
         "results_for": "Resultados para {name} — {company}",
         "tab_overview": "Resumen",
-        "tab_reco": "Próximos Pasos",
-        "tab_stories": "Casos de Éxito",
-        "radar_title": "#### Tu Estado Actual vs. Estado Mínimo Viable de la Industria (MVS)",
-        "series_current": "Tu Estado Actual",
-        "series_mvs": "MVS de la Industria",
+        "tab_reco": "Próximos pasos",
+        "tab_stories": "Casos de éxito",
+        "radar_title": "#### Tu estado actual vs. estado mínimo viable de la industria (MVS)",
+        "series_current": "Tu estado actual",
+        "series_mvs": "MVS de la industria",
         "not_assessed_note": "Las dimensiones marcadas como \"No sé\" se excluyen de la gráfica y los cálculos.",
-        "mvs_info_title": "ℹ️ ¿Qué es el Estado Mínimo Viable (MVS)?",
+        "mvs_info_title": "ℹ️ ¿Qué es el estado mínimo viable (MVS)?",
         "mvs_info_body": (
             "Un referente del Foro Económico Mundial que define el nivel mínimo de madurez "
             "necesario para mantenerte competitivo en tu industria."
         ),
-        "savings_title": "#### Oportunidad de Mejora Potencial al Alcanzar el MVS",
+        "savings_title": "#### Oportunidad de mejora potencial al alcanzar el MVS",
         "savings_caption": "Estimaciones indicativas para el segmento **{category}**:",
         "savings_kpi_col": "KPI",
-        "savings_value_col": "Mejora para Alcanzar el MVS",
+        "savings_value_col": "Mejora para alcanzar el MVS",
         "already_at_mvs": "Ya alcanzaste o superaste el MVS",
         "not_assessed_kpi": "No evaluado — excluido",
         "savings_footnote": (
@@ -491,24 +496,24 @@ UI: dict[str, dict[str, str]] = {
             "reconocidas por su desempeño digital. Actualmente incluye más de "
             "220 sitios en más de 30 países y 40 industrias."
         ),
-        "reco_title": "### Principales Áreas de Mejora y Soluciones Recomendadas",
+        "reco_title": "### Principales áreas de mejora y soluciones recomendadas",
         "reco_need_assessment": "Califica al menos una dimensión para ver recomendaciones.",
         "reco_level_transition": "Nivel {current} → Nivel {target}",
-        "reco_current_label": "Nivel Actual",
-        "reco_target_label": "Próximo Objetivo",
-        "reco_solutions_heading": "Soluciones Recomendadas que te Pueden Ayudar a Avanzar",
-        "reco_mastered_title": "Alcanzaste el Nivel 5 — Próximo paso",
+        "reco_current_label": "Nivel actual",
+        "reco_target_label": "Próximo objetivo",
+        "reco_solutions_heading": "Soluciones recomendadas que te pueden ayudar a avanzar",
+        "reco_mastered_title": "Alcanzaste el nivel 5 — próximo paso",
         "solutions_none": "Aún no hay soluciones específicas mapeadas para este nivel.",
-        "stories_title": "### Casos de Éxito de Clientes",
+        "stories_title": "### Casos de éxito de clientes",
         "stories_none": "Aún no encontramos casos de éxito específicos para tus dimensiones recomendadas.",
-        "start_over": "Comenzar de Nuevo",
-        "edit_answers": "← Editar Mis Respuestas",
-        "download_pdf": "⬇️ Descargar Mis Resultados (PDF)",
+        "start_over": "Comenzar de nuevo",
+        "edit_answers": "← Editar mis respuestas",
+        "download_pdf": "⬇️ Descargar mis resultados (PDF)",
         "dev_warning": (
             "⚠️ Modo desarrollo: Google Sheets no está configurado. "
             "Los envíos se están guardando en `{csv}`."
         ),
-        "live_title": "🛫 Resultados en Vivo — At 10,000 Feet",
+        "live_title": "🛫 Resultados en vivo — At 10,000 Feet",
         "live_count": "{count} respuestas hasta ahora · se actualiza automáticamente",
         "live_empty": "Aún no hay respuestas. Esta vista se actualiza automáticamente conforme la gente completa la evaluación.",
     },
