@@ -42,16 +42,64 @@ DIMENSION_ICONS: dict[str, str] = {
 
 KPI_LABELS: dict[str, dict[str, str]] = {
     "en": {
-        "oee": "Potential OEE Improvement",
-        "quality": "Potential Quality Cost Reduction",
-        "energy": "Potential Energy Savings",
-        "stock": "Potential Stock Turnover Improvement",
+        "oee": "OEE Improvement",
+        "quality": "Quality Cost Reduction",
+        "energy": "Energy Savings",
+        "stock": "Stock Turnover Improvement",
     },
     "es": {
-        "oee": "Mejora Potencial de OEE",
-        "quality": "Reducción Potencial de Costos de Calidad",
-        "energy": "Ahorro Potencial de Energía",
-        "stock": "Mejora Potencial en Rotación de Inventario",
+        "oee": "Mejora de OEE",
+        "quality": "Reducción de Costos de Calidad",
+        "energy": "Ahorro de Energía",
+        "stock": "Mejora en Rotación de Inventario",
+    },
+}
+
+KPI_DESCRIPTIONS: dict[str, dict[str, str]] = {
+    "en": {
+        "oee": (
+            "How much of your installed capacity actually turns into sellable "
+            "product — combining equipment availability, line speed and "
+            "first-pass quality."
+        ),
+        "quality": (
+            "What it costs you to sustain your quality level — rework, "
+            "non-conforming product, recalls and testing. Not lowering "
+            "quality, but spending less to hold it."
+        ),
+        "energy": (
+            "Energy consumed per unit produced — electricity, steam, "
+            "compressed air and refrigeration, typically the largest "
+            "conversion cost after raw material in F&B."
+        ),
+        "stock": (
+            "How fast raw material, packaging and finished goods move "
+            "through your operation. Slower turns mean tied-up capital and "
+            "more shrinkage from expiry."
+        ),
+    },
+    "es": {
+        "oee": (
+            "Qué tanto de tu capacidad instalada realmente se convierte en "
+            "producto vendible. Combina disponibilidad de equipo, velocidad "
+            "de línea y producto conforme."
+        ),
+        "quality": (
+            "Lo que te cuesta sostener tu nivel de calidad: retrabajos, "
+            "producto no conforme, retiros y análisis de laboratorio. No se "
+            "trata de bajar la calidad, sino de gastar menos en mantenerla."
+        ),
+        "energy": (
+            "Energía consumida por unidad producida. Incluye electricidad, "
+            "vapor, aire comprimido y frío, que en alimentos y bebidas "
+            "suelen ser el mayor costo de conversión después de la materia "
+            "prima."
+        ),
+        "stock": (
+            "Qué tan rápido rota tu inventario de materia prima, material "
+            "de empaque y producto terminado. Menos rotación significa "
+            "capital inmovilizado y más riesgo de merma por caducidad."
+        ),
     },
 }
 
@@ -287,12 +335,13 @@ def translate_fw(lang: str, text: str) -> str:
 # ---------------------------------------------------------------------------
 UI: dict[str, dict[str, str]] = {
     "en": {
-        "title": "At 10,000 Feet: How Ready Are You for Intelligent Transition?",
+        "title": "At 10,000 Feet: How Ready Are You to Unlock the Value of Digital Transformation?",
         "intro1": (
-            "This self-diagnostic helps you understand how prepared your operation is "
-            "for **intelligent automation**. In a few minutes you'll rate your maturity "
-            "across five dimensions and receive a normalized profile, your overall "
-            "readiness level, and a personalized roadmap of next moves."
+            "This self-assessment helps you understand your factory's readiness for "
+            "digital transformation. In just a few minutes, you will assess your "
+            "maturity across five key dimensions and receive a personalized view of "
+            "your current state, a comparison against the Industry Minimum Viable "
+            "Status (MVS), and recommended next steps."
         ),
         "pillars_prefix": "The five dimensions are: ",
         "step_answer": "Answer",
@@ -303,15 +352,26 @@ UI: dict[str, dict[str, str]] = {
         "work_email": "Email *",
         "email_help": "Use the same email you registered with for the forum.",
         "company": "Company *",
-        "food_category": "Food Category *",
+        "food_category": "Category *",
         "invalid_email": "Please enter a valid email address.",
         "next": "Next →",
         "motivation_question": "What is your biggest motivation to advance in the intelligent transition?",
         "motivation_optional": "(optional)",
         "motivation_placeholder": "Write your answer here...",
+        "investment_approach_question": "What is your current investment approach for automation and digital initiatives?",
+        "investment_approach_placeholder": "Write your answer here...",
+        "investment_trigger_question": "Are investments primarily triggered by operational issues, or guided by a clear vision and roadmap for future competitiveness?",
+        "investment_trigger_placeholder": "Write your answer here...",
         "continue": "Continue",
         "back": "← Back",
         "step_of": "Step {step} of {total}",
+        "assessment_instruction": (
+            "**Choose the level/statement you identify with most right now.** "
+            "Read all the options below and select the single description that "
+            "best matches how your operation actually works today — not where "
+            "you'd like to be. There are no right or wrong answers; if none of "
+            "the statements fit, pick \"Don't know / Skip.\""
+        ),
         "dont_know": "I don't know / I don't want to rate this dimension",
         "level0_label": "Don't know / Skip",
         "level0_note": "This dimension will be excluded from the chart, MVS comparison and recommendations.",
@@ -319,7 +379,7 @@ UI: dict[str, dict[str, str]] = {
         "calc_score": "See My Results",
         "results_for": "Results for {name} — {company}",
         "tab_overview": "Overview",
-        "tab_reco": "Recommendations",
+        "tab_reco": "Next Steps",
         "tab_stories": "Customer Stories",
         "radar_title": "#### Your Current State vs. Industry Minimum Viable Status (MVS)",
         "series_current": "Your Current State",
@@ -333,20 +393,28 @@ UI: dict[str, dict[str, str]] = {
         "savings_title": "#### Potential Improvement Opportunity from Reaching MVS",
         "savings_caption": "Indicative estimates for **{category}** segment:",
         "savings_kpi_col": "KPI",
-        "savings_value_col": "Potential Improvement to Reach MVS",
+        "savings_value_col": "Improvement to Reach MVS",
         "already_at_mvs": "Already at or above MVS",
         "not_assessed_kpi": "Not assessed — excluded",
+        "savings_footnote": (
+            "Improvement ranges are based on the World Economic Forum's Global "
+            "Lighthouse Network, a community of manufacturing sites recognized "
+            "for their digital performance. It currently includes 220+ sites "
+            "across 30+ countries and 40+ industries."
+        ),
         "reco_title": "### Top Recommended Improvement Areas & Solutions",
         "reco_need_assessment": "Rate at least one dimension to see recommendations.",
         "reco_level_transition": "Level {current} → Level {target}",
+        "reco_current_label": "Current Level",
+        "reco_target_label": "Next Target",
+        "reco_solutions_heading": "Recommended Solutions to Help You Move Forward",
         "reco_mastered_title": "You've reached Level 5 — Next step",
         "solutions_none": "No specific solutions mapped yet for this level — check back soon.",
-        "factory_os_badge": "Factory OS",
         "stories_title": "### Customer Success Stories",
-        "stories_context": "Since your recommended next step is in **{dimension}**, check out this success story:",
         "stories_none": "No specific case studies found for your recommended dimensions yet.",
-        "read_story": "Read Full Story →",
         "start_over": "Start Over",
+        "edit_answers": "← Edit My Answers",
+        "download_pdf": "⬇️ Download My Results (PDF)",
         "dev_warning": (
             "⚠️ Dev mode: Google Sheets not configured. "
             "Submissions are being written to `{csv}`."
@@ -354,21 +422,15 @@ UI: dict[str, dict[str, str]] = {
         "live_title": "🛫 Live Results — At 10,000 Feet",
         "live_count": "{count} submissions so far · refreshes automatically",
         "live_empty": "No submissions yet. This view refreshes automatically as people complete the assessment.",
-        "email_consent_note": "📧 We'll email your results to the address above.",
-        "email_subject": "Your At 10,000 Feet results are ready 🛫",
-        "email_greeting": "Hi {name},",
-        "email_intro": "Thanks for completing the assessment! Here's a summary of your results.",
-        "email_dimensions_title": "Your maturity by dimension",
-        "email_recommendations_title": "Your top recommended next steps",
-        "email_footer": "This email was sent automatically because you completed the At 10,000 Feet assessment at Foro MX 2026.",
     },
     "es": {
-        "title": "A 10,000 Pies: ¿Qué Tan Listo Estás para la Transición Inteligente?",
+        "title": "A 10,000 Pies: ¿Qué Tan Listo Estás para Desbloquear el Valor de la Transformación Digital?",
         "intro1": (
-            "Este autodiagnóstico te ayuda a entender qué tan preparada está tu operación "
-            "para la **automatización inteligente**. En unos minutos calificarás tu madurez "
-            "en cinco dimensiones y recibirás un perfil normalizado, tu nivel de "
-            "preparación general y una hoja de ruta personalizada de próximos pasos."
+            "Esta autoevaluación te ayuda a entender qué tan lista está tu planta para "
+            "la transformación digital. En solo unos minutos, evaluarás tu madurez en "
+            "cinco dimensiones clave y recibirás una vista personalizada de tu estado "
+            "actual, una comparación contra el Estado Mínimo Viable de la Industria "
+            "(MVS) y los siguientes pasos recomendados."
         ),
         "pillars_prefix": "Las cinco dimensiones son: ",
         "step_answer": "Responder",
@@ -379,15 +441,26 @@ UI: dict[str, dict[str, str]] = {
         "work_email": "Correo electrónico *",
         "email_help": "Usa el mismo correo con el que te registraste al foro.",
         "company": "Empresa *",
-        "food_category": "Categoría de Alimento *",
+        "food_category": "Categoría *",
         "invalid_email": "Por favor ingresa un correo electrónico válido.",
         "next": "Siguiente →",
         "motivation_question": "¿Cuál es tu mayor motivación para avanzar en la transición inteligente?",
         "motivation_optional": "(opcional)",
         "motivation_placeholder": "Escribe tu respuesta aquí...",
+        "investment_approach_question": "¿Cuál es tu enfoque actual de inversión en automatización e iniciativas digitales?",
+        "investment_approach_placeholder": "Escribe tu respuesta aquí...",
+        "investment_trigger_question": "¿Las inversiones se disparan principalmente por problemas operativos, o se guían por una visión clara y una hoja de ruta para la competitividad futura?",
+        "investment_trigger_placeholder": "Escribe tu respuesta aquí...",
         "continue": "Continuar",
         "back": "← Atrás",
         "step_of": "Paso {step} de {total}",
+        "assessment_instruction": (
+            "**Elige el nivel/statement con el que más te identificas actualmente.** "
+            "Lee todas las opciones a continuación y selecciona la única descripción "
+            "que mejor refleje cómo funciona realmente tu operación hoy, no cómo te "
+            "gustaría que fuera. No hay respuestas correctas o incorrectas; si ninguna "
+            "opción aplica, elige \"No sé / Omitir\"."
+        ),
         "dont_know": "No sé / no quiero calificar esta dimensión",
         "level0_label": "No sé / Omitir",
         "level0_note": "Esta dimensión se excluirá de la gráfica, la comparación con el MVS y las recomendaciones.",
@@ -395,7 +468,7 @@ UI: dict[str, dict[str, str]] = {
         "calc_score": "Ver Mis Resultados",
         "results_for": "Resultados para {name} — {company}",
         "tab_overview": "Resumen",
-        "tab_reco": "Recomendaciones",
+        "tab_reco": "Próximos Pasos",
         "tab_stories": "Casos de Éxito",
         "radar_title": "#### Tu Estado Actual vs. Estado Mínimo Viable de la Industria (MVS)",
         "series_current": "Tu Estado Actual",
@@ -409,20 +482,28 @@ UI: dict[str, dict[str, str]] = {
         "savings_title": "#### Oportunidad de Mejora Potencial al Alcanzar el MVS",
         "savings_caption": "Estimaciones indicativas para el segmento **{category}**:",
         "savings_kpi_col": "KPI",
-        "savings_value_col": "Mejora Potencial para Alcanzar el MVS",
+        "savings_value_col": "Mejora para Alcanzar el MVS",
         "already_at_mvs": "Ya alcanzaste o superaste el MVS",
         "not_assessed_kpi": "No evaluado — excluido",
+        "savings_footnote": (
+            "Los rangos de mejora se basan en el Global Lighthouse Network del "
+            "Foro Económico Mundial, una red de plantas de manufactura "
+            "reconocidas por su desempeño digital. Actualmente incluye más de "
+            "220 sitios en más de 30 países y 40 industrias."
+        ),
         "reco_title": "### Principales Áreas de Mejora y Soluciones Recomendadas",
         "reco_need_assessment": "Califica al menos una dimensión para ver recomendaciones.",
         "reco_level_transition": "Nivel {current} → Nivel {target}",
+        "reco_current_label": "Nivel Actual",
+        "reco_target_label": "Próximo Objetivo",
+        "reco_solutions_heading": "Soluciones Recomendadas que te Pueden Ayudar a Avanzar",
         "reco_mastered_title": "Alcanzaste el Nivel 5 — Próximo paso",
         "solutions_none": "Aún no hay soluciones específicas mapeadas para este nivel.",
-        "factory_os_badge": "Factory OS",
         "stories_title": "### Casos de Éxito de Clientes",
-        "stories_context": "Ya que tu próximo paso recomendado es en **{dimension}**, conoce este caso de éxito:",
         "stories_none": "Aún no encontramos casos de éxito específicos para tus dimensiones recomendadas.",
-        "read_story": "Leer Caso Completo →",
         "start_over": "Comenzar de Nuevo",
+        "edit_answers": "← Editar Mis Respuestas",
+        "download_pdf": "⬇️ Descargar Mis Resultados (PDF)",
         "dev_warning": (
             "⚠️ Modo desarrollo: Google Sheets no está configurado. "
             "Los envíos se están guardando en `{csv}`."
@@ -430,13 +511,6 @@ UI: dict[str, dict[str, str]] = {
         "live_title": "🛫 Resultados en Vivo — At 10,000 Feet",
         "live_count": "{count} respuestas hasta ahora · se actualiza automáticamente",
         "live_empty": "Aún no hay respuestas. Esta vista se actualiza automáticamente conforme la gente completa la evaluación.",
-        "email_consent_note": "📧 Enviaremos tus resultados al correo indicado arriba.",
-        "email_subject": "Tus resultados de At 10,000 Feet ya están listos 🛫",
-        "email_greeting": "Hola {name},",
-        "email_intro": "¡Gracias por completar la evaluación! Aquí tienes un resumen de tus resultados.",
-        "email_dimensions_title": "Tu madurez por dimensión",
-        "email_recommendations_title": "Tus principales próximos pasos recomendados",
-        "email_footer": "Este correo se envió automáticamente porque completaste la evaluación At 10,000 Feet en Foro MX 2026.",
     },
 }
 

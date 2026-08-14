@@ -36,18 +36,14 @@ _DIMENSION_NAME_MAP = {
 }
 
 # Food categories offered on the participant form, mapped to the "Industry
-# Sub-Sector" label used in the "MVS potential savings" sheet. The sheet has
-# no entry for "Plant-based" or "Other": Plant-based beverages are commercially
-# closest to non-dairy beverages, so they fall back to that row; "Other" has
-# no sensible single match, so it falls back to the average across all five
+# Sub-Sector" label used in the "MVS potential savings" sheet. "Other" has
+# no sensible single match, so it falls back to the average across all
 # rows (computed in _average_savings_row below).
 FOOD_CATEGORY_TO_SUBSECTOR = {
     "Dairy": "Dairy Beverage",
     "Beverage": "Beverages (Non-Dairy)",
     "Cheese": "Cheese & Whey",
-    "Powder": "Powder / Reconstitution",
     "Ice Cream": "Ice Cream",
-    "Plant-based": "Beverages (Non-Dairy)",
     "Other": "__AVERAGE__",
 }
 

@@ -28,12 +28,13 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 import data_loader as dl
-from email_report import send_results_email
+from pdf_report import build_results_pdf
 from translations import (
     DIMENSION_ICONS,
     DIMENSION_NAMES,
     DIMENSION_PRIORITY,
     FALLBACK_SOLUTIONS,
+    KPI_DESCRIPTIONS,
     KPI_DIMENSIONS,
     KPI_LABELS,
     UI,
@@ -43,7 +44,7 @@ from translations import (
 
 DIMENSIONS: list[str] = dl.DIMENSIONS  # ["strategy", "people", "operations", "connectivity", "intelligence"]
 
-FOOD_CATEGORIES = ["Dairy", "Beverage", "Plant-based", "Cheese", "Powder", "Ice Cream", "Other"]
+FOOD_CATEGORIES = ["Dairy", "Beverage", "Cheese", "Ice Cream", "Other"]
 
 
 # ===========================================================================
@@ -57,6 +58,9 @@ REFERENCE_RED = "#E63323"
 MVS_COLOR = REFERENCE_RED
 NAVY_TEXT = "#1B2E96"
 PALE_BLUE = "#DCE6FE"
+GREEN_BG = "#E1F5E7"
+GREEN_BORDER = "#2E9E4F"
+GREEN_TEXT = "#1C6B34"
 RADAR_TRACK_COLOR = "#E3E6EA"
 
 
@@ -64,7 +68,8 @@ RADAR_TRACK_COLOR = "#E3E6EA"
 # ANALYTICS — persistence
 # ===========================================================================
 SHEET_HEADER = (
-    ["timestamp_iso", "share_data", "name", "company", "email", "food_category", "motivation", "language"]
+    ["timestamp_iso", "share_data", "name", "company", "email", "food_category", "motivation",
+     "investment_approach", "investment_trigger", "language"]
     + [f"{d}_level" for d in DIMENSIONS]
     + ["assessed_count"]
 )
@@ -131,8 +136,9 @@ def build_row(profile: dict, answers: dict, lang: str) -> list:
     levels = [answers.get(d, 0) for d in DIMENSIONS]
     assessed_count = sum(1 for v in levels if v > 0)
     pii = (
-        [profile["name"], profile["company"], profile["email"], profile.get("food_category", ""), profile.get("motivation", "")]
-        if share_data else ["", "", "", profile.get("food_category", ""), ""]
+        [profile["name"], profile["company"], profile["email"], profile.get("food_category", ""),
+         profile.get("motivation", ""), profile.get("investment_approach", ""), profile.get("investment_trigger", "")]
+        if share_data else ["", "", "", profile.get("food_category", ""), "", "", ""]
     )
     return (
         [datetime.now(timezone.utc).isoformat(), "yes" if share_data else "no"]
@@ -322,7 +328,6 @@ def render_profile() -> None:
     email_ok = bool(EMAIL_RE.match(email.strip())) if email else False
     if email and not email_ok:
         st.caption(f":red[{t(lang, 'invalid_email')}]")
-    st.caption(t(lang, "email_consent_note"))
 
     all_filled = all(v.strip() for v in (name, company, email))
     can_continue = all_filled and email_ok
@@ -351,16 +356,36 @@ def render_profile() -> None:
 # ===========================================================================
 def render_motivation() -> None:
     lang = st.session_state["lang"]
-    st.subheader(f"{t(lang, 'motivation_question')} {t(lang, 'motivation_optional')}")
+    profile = st.session_state["profile"]
 
-    current = st.session_state["profile"].get("motivation", "")
-    answer = st.text_area(
+    st.subheader(f"{t(lang, 'motivation_question')} {t(lang, 'motivation_optional')}")
+    motivation = st.text_area(
         t(lang, "motivation_question"),
-        value=current,
+        value=profile.get("motivation", ""),
         placeholder=t(lang, "motivation_placeholder"),
         key="in_motivation",
         label_visibility="collapsed",
         height=150,
+    )
+
+    st.subheader(f"{t(lang, 'investment_approach_question')} {t(lang, 'motivation_optional')}")
+    investment_approach = st.text_area(
+        t(lang, "investment_approach_question"),
+        value=profile.get("investment_approach", ""),
+        placeholder=t(lang, "investment_approach_placeholder"),
+        key="in_investment_approach",
+        label_visibility="collapsed",
+        height=120,
+    )
+
+    st.subheader(f"{t(lang, 'investment_trigger_question')} {t(lang, 'motivation_optional')}")
+    investment_trigger = st.text_area(
+        t(lang, "investment_trigger_question"),
+        value=profile.get("investment_trigger", ""),
+        placeholder=t(lang, "investment_trigger_placeholder"),
+        key="in_investment_trigger",
+        label_visibility="collapsed",
+        height=120,
     )
 
     cols = st.columns([1, 3])
@@ -370,7 +395,9 @@ def render_motivation() -> None:
             st.rerun()
     with cols[1]:
         if st.button(t(lang, "continue"), type="primary"):
-            st.session_state["profile"]["motivation"] = answer.strip()
+            st.session_state["profile"]["motivation"] = motivation.strip()
+            st.session_state["profile"]["investment_approach"] = investment_approach.strip()
+            st.session_state["profile"]["investment_trigger"] = investment_trigger.strip()
             st.session_state["screen"] = "assessment"
             st.session_state["dim_index"] = 0
             st.rerun()
@@ -420,6 +447,7 @@ def render_assessment_step() -> None:
 
     st.subheader(f"{DIMENSION_ICONS[dim]} {DIMENSION_NAMES[lang][dim]}")
     st.markdown(f"*{translate_fw(lang, fw['question'])}*")
+    st.info(t(lang, "assessment_instruction"))
     st.markdown("")
 
     # Level 0 ("I don't know / I don't want to answer") is a real option in
@@ -463,8 +491,6 @@ def render_assessment_step() -> None:
         if st.button(label, type="primary"):
             if is_last:
                 persist_submission(st.session_state["profile"], st.session_state["answers"], lang)
-                full_framework = dl.load_workbook_data()["framework"]
-                send_results_email(lang, st.session_state["profile"], st.session_state["answers"], full_framework)
                 st.session_state["screen"] = "results"
                 st.session_state["scroll_top"] = True
             else:
@@ -489,15 +515,36 @@ def get_top_recommendations(answers: dict) -> list[dict]:
 
 
 def get_solutions_for_target(framework: dict, dim: str, target_level: int) -> list[dict]:
-    """Step A: solutions mapped to this exact dimension+level. Step B
-    (fallback): dimension-wide fallback list if that level has none."""
+    """Solutions mapped to this exact dimension+level, topped up (from the
+    dimension's fallback list, then its other levels) to 3-5 items, since
+    most levels only have 1-2 solutions mapped directly in the workbook."""
     solutions_bank = dl.load_workbook_data()["solutions_bank"]
-    sols = framework[dim]["solutions"].get(target_level, [])
-    if not sols:
-        sols = [{"name": name, "vp": None} for name in FALLBACK_SOLUTIONS.get(dim, [])]
+    sols = list(framework[dim]["solutions"].get(target_level, []))
+    seen_names = {s["name"] for s in sols}
+
+    if len(sols) < 3:
+        for name in FALLBACK_SOLUTIONS.get(dim, []):
+            if name not in seen_names:
+                sols.append({"name": name, "vp": None})
+                seen_names.add(name)
+            if len(sols) >= 3:
+                break
+
+    if len(sols) < 3:
+        for lvl in sorted(framework[dim]["solutions"].keys()):
+            if lvl == target_level:
+                continue
+            for s in framework[dim]["solutions"][lvl]:
+                if s["name"] not in seen_names:
+                    sols.append(s)
+                    seen_names.add(s["name"])
+                if len(sols) >= 3:
+                    break
+            if len(sols) >= 3:
+                break
 
     out = []
-    for s in sols:
+    for s in sols[:5]:
         bank_entry = solutions_bank.get(s["name"], {})
         vp = s.get("vp") or bank_entry.get("vp") or ""
         out.append({"name": s["name"], "vp": vp, "portfolio": bank_entry.get("portfolio", "")})
@@ -588,17 +635,22 @@ def _savings_table_html(lang: str, answers: dict, framework: dict, food_category
         else:
             value = savings.get(kpi, "")
         rows.append(
-            f'<tr><td style="padding:8px 10px;border-bottom:1px solid #E5E5E5;">{KPI_LABELS[lang][kpi]}</td>'
+            '<tr><td style="padding:8px 10px;border-bottom:1px solid #E5E5E5;">'
+            f'<div style="font-weight:600;">{KPI_LABELS[lang][kpi]}</div>'
+            f'<div style="color:#777;font-size:0.82rem;margin-top:2px;">{KPI_DESCRIPTIONS[lang][kpi]}</div>'
+            "</td>"
             f'<td style="padding:8px 10px;border-bottom:1px solid #E5E5E5;font-weight:700;color:{PRIMARY};">{value}</td></tr>'
         )
 
-    return (
+    table = (
         '<table style="border-collapse:collapse;width:100%;font-size:0.94rem;">'
         '<thead><tr style="border-bottom:2px solid #ccc;">'
         f'<th style="text-align:left;padding:8px 10px;">{t(lang, "savings_kpi_col")}</th>'
         f'<th style="text-align:left;padding:8px 10px;">{t(lang, "savings_value_col")}</th>'
         "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
     )
+    footnote = f'<p style="color:#888;font-size:0.78rem;margin-top:8px;">{t(lang, "savings_footnote")}</p>'
+    return table + footnote
 
 
 def render_overview_tab(lang: str, answers: dict, framework: dict, food_category: str) -> None:
@@ -643,19 +695,42 @@ def render_recommendations_tab(lang: str, answers: dict, framework: dict) -> Non
             )
             st.markdown("")
 
+            def _level_card(label: str, lvl_num: int, bg: str, border: str, text_color: str) -> str:
+                info = framework[dim]["levels"].get(lvl_num)
+                if not info:
+                    return ""
+                name = translate_fw(lang, info["name"])
+                desc = translate_fw(lang, info["description"])
+                return (
+                    f'<div style="flex:1 1 260px;background:{bg};border:2px solid {border};'
+                    'border-radius:10px;padding:14px 18px;">'
+                    f'<div style="color:{text_color};font-weight:800;font-size:1.02rem;margin-bottom:6px;">'
+                    f"{label}: {lvl_num}</div>"
+                    f'<div style="color:{text_color};font-weight:700;margin-bottom:4px;">{name}</div>'
+                    f'<div style="color:{text_color};font-size:0.88rem;line-height:1.4;opacity:.9;">{desc}</div>'
+                    "</div>"
+                )
+
+            st.markdown(
+                '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0 4px;">'
+                + _level_card(t(lang, "reco_current_label"), rec["current"], PALE_BLUE, PRIMARY, NAVY_TEXT)
+                + '<div style="flex:0 0 auto;font-size:1.6rem;color:#999;">→</div>'
+                + _level_card(t(lang, "reco_target_label"), rec["target"], GREEN_BG, GREEN_BORDER, GREEN_TEXT)
+                + "</div>",
+                unsafe_allow_html=True,
+            )
+            st.markdown("")
+
             solutions = get_solutions_for_target(framework, dim, rec["target"])
-            if not solutions:
+            if solutions:
+                st.markdown(f"**{t(lang, 'reco_solutions_heading')}**")
+            else:
                 st.caption(t(lang, "solutions_none"))
             for s in solutions:
-                badge = (
-                    f'<span style="background:{PALE_BLUE};color:{NAVY_TEXT};border-radius:8px;'
-                    f'padding:2px 8px;font-size:0.72rem;font-weight:700;margin-left:8px;">{t(lang, "factory_os_badge")}</span>'
-                    if s["portfolio"] == "Factory OS" else ""
-                )
                 st.markdown(
                     f'<div style="margin:6px 0;">'
                     f'<span style="margin-right:6px;">✅</span>'
-                    f'<span style="font-weight:700;">{s["name"]}</span>{badge}<br>'
+                    f'<span style="font-weight:700;">{s["name"]}</span><br>'
                     f'<span style="color:#555;font-size:0.9rem;">{translate_fw(lang, s["vp"])}</span></div>',
                     unsafe_allow_html=True,
                 )
@@ -665,8 +740,13 @@ def render_recommendations_tab(lang: str, answers: dict, framework: dict) -> Non
 # ===========================================================================
 # RESULTS — TAB 3: Customer stories
 # ===========================================================================
-def _pick_stories_for_dimension(all_stories: list[dict], dim: str, food_category: str, bucket: str) -> list[dict]:
-    candidates = [s for s in all_stories if s["dimension"] == dim]
+def _pick_stories_for_dimension(
+    all_stories: list[dict], dim: str, food_category: str, bucket: str, seen: set[str]
+) -> list[dict]:
+    """Candidates for one dimension, ranked by category/bucket match, skipping
+    any customer already picked for a previous dimension (seen is shared
+    across the whole tab so a story never repeats)."""
+    candidates = [s for s in all_stories if s["dimension"] == dim and s["customer"] not in seen]
     if not candidates:
         return []
 
@@ -676,7 +756,6 @@ def _pick_stories_for_dimension(all_stories: list[dict], dim: str, food_category
         return (cat_match, bucket_match)
 
     ranked = sorted(candidates, key=_score, reverse=True)
-    seen = set()
     picked = []
     for s in ranked:
         if s["customer"] in seen:
@@ -697,30 +776,21 @@ def render_stories_tab(lang: str, answers: dict, food_category: str) -> None:
         return
 
     all_stories = dl.load_workbook_data()["customer_stories"]
+    seen: set[str] = set()
     shown = 0
-    any_story = False
     for rec in top:
         if shown >= 6:
             break
         dim = rec["dimension"]
         bucket = "1-2" if rec["current"] <= 2 else ("3" if rec["current"] == 3 else "4-5")
-        stories = _pick_stories_for_dimension(all_stories, dim, food_category, bucket)
+        stories = _pick_stories_for_dimension(all_stories, dim, food_category, bucket, seen)
         for s in stories:
             if shown >= 6:
                 break
-            any_story = True
-            st.markdown(t(lang, "stories_context", dimension=DIMENSION_NAMES[lang][dim]))
-            st.markdown(
-                f'<div style="background:#F7F9FC;border:1px solid #DCE6F2;border-radius:10px;'
-                f'padding:14px 16px;margin-bottom:10px;">'
-                f'<div style="font-weight:700;font-size:1.0rem;">{s["customer"]}</div>'
-                f'<a href="{s["url"]}" target="_blank">{t(lang, "read_story")}</a>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
+            st.markdown(f'📄 [{s["customer"]}]({s["url"]})')
             shown += 1
 
-    if not any_story:
+    if shown == 0:
         st.caption(t(lang, "stories_none"))
 
 
@@ -750,12 +820,28 @@ def render_results() -> None:
         render_stories_tab(lang, answers, profile.get("food_category", "Dairy"))
 
     st.divider()
-    if st.button(t(lang, "start_over")):
-        keep_ws = st.session_state.get("gs_worksheet")
-        st.session_state.clear()
-        if keep_ws is not None:
-            st.session_state["gs_worksheet"] = keep_ws
-        st.rerun()
+    pdf_bytes = build_results_pdf(lang, profile, answers, framework, profile.get("food_category", "Dairy"))
+    st.download_button(
+        t(lang, "download_pdf"),
+        data=pdf_bytes,
+        file_name=f"at-10000-feet-{profile.get('name', 'results').strip().replace(' ', '_').lower()}.pdf",
+        mime="application/pdf",
+        type="primary",
+    )
+
+    cols = st.columns([1, 1, 3])
+    with cols[0]:
+        if st.button(t(lang, "edit_answers")):
+            st.session_state["dim_index"] = len(DIMENSIONS) - 1
+            st.session_state["screen"] = "assessment"
+            st.rerun()
+    with cols[1]:
+        if st.button(t(lang, "start_over")):
+            keep_ws = st.session_state.get("gs_worksheet")
+            st.session_state.clear()
+            if keep_ws is not None:
+                st.session_state["gs_worksheet"] = keep_ws
+            st.rerun()
 
 
 # ===========================================================================
