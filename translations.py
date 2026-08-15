@@ -42,9 +42,9 @@ DIMENSION_ICONS: dict[str, str] = {
 
 KPI_LABELS: dict[str, dict[str, str]] = {
     "en": {
-        "oee": "OEE Improvement",
-        "quality": "Quality Cost Reduction",
-        "energy": "Energy Savings",
+        "oee": "Potential OEE Gains (MVS)",
+        "quality": "Potential Quality Cost Drop",
+        "energy": "Potential Energy Savings",
         "stock": "Stock Turnover Improvement",
     },
     "es": {
@@ -392,10 +392,10 @@ UI: dict[str, dict[str, str]] = {
             "A World Economic Forum benchmark defining the minimum maturity level needed "
             "to remain competitive in your industry."
         ),
-        "savings_title": "#### Potential improvement opportunity from reaching MVS",
+        "savings_title": "#### Potential saving related to MVS",
         "savings_caption": "Indicative estimates for **{category}** segment:",
         "savings_kpi_col": "KPI",
-        "savings_value_col": "Improvement to reach MVS",
+        "savings_value_col": "potential improvement",
         "already_at_mvs": "Already at or above MVS",
         "not_assessed_kpi": "Not assessed — excluded",
         "savings_footnote": (
