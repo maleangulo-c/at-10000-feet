@@ -32,6 +32,31 @@ DIMENSION_NAMES: dict[str, dict[str, str]] = {
     },
 }
 
+FOOD_CATEGORY_NAMES: dict[str, dict[str, str]] = {
+    "en": {
+        "Dairy": "Dairy",
+        "Beverage": "Beverage",
+        "Cheese": "Cheese",
+        "Ice Cream": "Ice Cream",
+        "Other": "Other",
+    },
+    "es": {
+        "Dairy": "Lácteos",
+        "Beverage": "Bebidas",
+        "Cheese": "Quesos",
+        "Ice Cream": "Helados",
+        "Other": "Otros",
+    },
+}
+
+
+def food_category_label(lang: str, category: str) -> str:
+    """Display label for a food_category value — falls back to the raw
+    (English) category string if it isn't a known key, so new categories
+    added to FOOD_CATEGORIES degrade gracefully rather than crashing."""
+    return FOOD_CATEGORY_NAMES.get(lang, {}).get(category, category)
+
+
 DIMENSION_ICONS: dict[str, str] = {
     "strategy": "🎯",
     "people": "👥",
@@ -426,7 +451,7 @@ UI: dict[str, dict[str, str]] = {
         "live_empty": "No submissions yet. This view refreshes automatically as people complete the assessment.",
     },
     "es": {
-        "title": "A 10,000 Pies: ¿qué tan listo estás para desbloquear el valor de la transformación digital?",
+        "title": "A 10.000 Pies: ¿qué tan listo estás para desbloquear el valor de la transformación digital?",
         "intro1": (
             "Esta autoevaluación te ayuda a entender qué tan lista está tu planta para "
             "la transformación digital. En solo unos minutos, evaluarás tu madurez en "
@@ -513,7 +538,7 @@ UI: dict[str, dict[str, str]] = {
             "⚠️ Modo desarrollo: Google Sheets no está configurado. "
             "Los envíos se están guardando en `{csv}`."
         ),
-        "live_title": "🛫 Resultados en vivo — At 10,000 Feet",
+        "live_title": "🛫 Resultados en vivo — A 10.000 Pies",
         "live_count": "{count} respuestas hasta ahora · se actualiza automáticamente",
         "live_empty": "Aún no hay respuestas. Esta vista se actualiza automáticamente conforme la gente completa la evaluación.",
     },

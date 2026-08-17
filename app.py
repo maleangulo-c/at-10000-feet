@@ -38,6 +38,7 @@ from translations import (
     KPI_DIMENSIONS,
     KPI_LABELS,
     UI,
+    food_category_label,
     t,
     translate_fw,
 )
@@ -269,6 +270,7 @@ def init_state() -> None:
     st.session_state.setdefault("dim_index", 0)
     if "answers" not in st.session_state:
         st.session_state["answers"] = {d: 1 for d in DIMENSIONS}
+    st.session_state.setdefault("touched_dims", set())
 
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -362,6 +364,7 @@ def render_profile() -> None:
             t(lang, "food_category"),
             options=FOOD_CATEGORIES,
             index=FOOD_CATEGORIES.index(profile.get("food_category", "Dairy")) if profile.get("food_category") in FOOD_CATEGORIES else 0,
+            format_func=lambda c: food_category_label(lang, c),
             key="in_food_category",
         )
 
@@ -491,11 +494,12 @@ def render_assessment_step() -> None:
     # visible at once instead of only the one under the thumb.
     st.markdown(_OPTION_CSS, unsafe_allow_html=True)
     current_answer = st.session_state["answers"][dim]
+    dim_touched = dim in st.session_state["touched_dims"]
     for lvl_num in sorted(levels_with_zero.keys()):
         level_info = levels_with_zero[lvl_num]
         name = translate_fw(lang, level_info["name"])
         desc = translate_fw(lang, level_info["description"])
-        is_selected = lvl_num == current_answer
+        is_selected = dim_touched and lvl_num == current_answer
         if st.button(
             _level_option_label(lvl_num, name, desc),
             key=f"opt_{dim}_{lvl_num}",
@@ -503,6 +507,7 @@ def render_assessment_step() -> None:
             use_container_width=True,
         ):
             st.session_state["answers"][dim] = lvl_num
+            st.session_state["touched_dims"].add(dim)
             st.rerun()
 
     st.divider()
@@ -647,7 +652,7 @@ def render_radar(lang: str, answers: dict, framework: dict) -> None:
         height=480,
         paper_bgcolor="#FFFFFF",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
 
 
 def render_category_radar(lang: str, by_category: dict) -> None:
@@ -670,14 +675,15 @@ def render_category_radar(lang: str, by_category: dict) -> None:
         values = [cat_data["averages"][d] for d in DIMENSIONS]
         values_closed = values + [values[0]]
         color = CATEGORY_COLORS[cat]
+        cat_label = food_category_label(lang, cat)
         fig.add_trace(
             go.Scatterpolar(
                 r=values_closed, theta=theta_closed, mode="lines+markers",
                 line=dict(color=color, width=3),
                 marker=dict(color=color, size=9),
-                name=f"{cat} (n={cat_data['count']})",
+                name=f"{cat_label} (n={cat_data['count']})",
                 customdata=customdata,
-                hovertemplate="%{customdata} — " + cat + ": %{r}/5<extra></extra>",
+                hovertemplate="%{customdata} — " + cat_label + ": %{r}/5<extra></extra>",
             )
         )
 
@@ -696,12 +702,12 @@ def render_category_radar(lang: str, by_category: dict) -> None:
             bgcolor="#FFFFFF",
         ),
         showlegend=True,
-        legend=dict(orientation="h", y=-0.15, x=0.1, font=dict(color=NAVY_TEXT)),
+        legend=dict(orientation="h", y=-0.15, x=0.5, xanchor="center", font=dict(color=NAVY_TEXT)),
         margin=dict(l=80, r=80, t=50, b=50),
         height=520,
         paper_bgcolor="#FFFFFF",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
 
 
 def _savings_table_html(lang: str, answers: dict, framework: dict, food_category: str) -> str:
@@ -745,7 +751,7 @@ def render_overview_tab(lang: str, answers: dict, framework: dict, food_category
 
     st.divider()
     st.markdown(t(lang, "savings_title"))
-    st.caption(t(lang, "savings_caption", category=food_category))
+    st.caption(t(lang, "savings_caption", category=food_category_label(lang, food_category)))
     st.markdown(_savings_table_html(lang, answers, framework, food_category), unsafe_allow_html=True)
 
 

@@ -35,6 +35,7 @@ from translations import (
     KPI_DESCRIPTIONS,
     KPI_DIMENSIONS,
     KPI_LABELS,
+    food_category_label,
     t,
     translate_fw,
 )
@@ -538,7 +539,7 @@ def build_results_pdf(
     _section_title(pdf, t(lang, "savings_title").replace("#", "").strip())
     pdf.set_font(FONT_FAMILY, "", 9)
     pdf.set_text_color(*GRAY_RGB)
-    _mc(pdf, CONTENT_WIDTH, 4.6, _safe(t(lang, "savings_caption", category=food_category)))
+    _mc(pdf, CONTENT_WIDTH, 4.6, _safe(t(lang, "savings_caption", category=food_category_label(lang, food_category))))
     pdf.set_text_color(*BODY_TEXT_RGB)
     pdf.ln(0.5)
 
