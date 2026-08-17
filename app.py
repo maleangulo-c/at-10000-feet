@@ -529,6 +529,7 @@ def render_assessment_step() -> None:
                 st.session_state["screen"] = "motivation"
             else:
                 st.session_state["dim_index"] -= 1
+            st.session_state["scroll_top"] = True
             st.rerun()
     with cols[1]:
         is_last = idx == len(DIMENSIONS) - 1
@@ -537,9 +538,9 @@ def render_assessment_step() -> None:
             if is_last:
                 persist_submission(st.session_state["profile"], st.session_state["answers"], lang)
                 st.session_state["screen"] = "results"
-                st.session_state["scroll_top"] = True
             else:
                 st.session_state["dim_index"] += 1
+            st.session_state["scroll_top"] = True
             st.rerun()
 
 
@@ -900,9 +901,6 @@ def render_stories_tab(lang: str, answers: dict, food_category: str) -> None:
 def render_results() -> None:
     lang = st.session_state["lang"]
 
-    if st.session_state.pop("scroll_top", False):
-        scroll_to_top()
-
     answers = st.session_state["answers"]
     profile = st.session_state["profile"]
     framework = dl.load_workbook_data()["framework"]
@@ -1000,6 +998,9 @@ def main() -> None:
 
     if not _has_google_secrets():
         st.sidebar.warning(t(lang, "dev_warning", csv=LOCAL_CSV))
+
+    if st.session_state.pop("scroll_top", False):
+        scroll_to_top()
 
     screen = st.session_state["screen"]
     if screen == "welcome":
