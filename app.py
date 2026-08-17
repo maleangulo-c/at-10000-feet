@@ -260,6 +260,17 @@ def _compute_live_aggregate() -> dict:
     }
 
 
+def _audience_aggregate_for_category(food_category: str) -> dict:
+    """Live snapshot of the audience average (per dimension) and respondent
+    count for a single food category — used to overlay a third series on the
+    results PDF's radar chart at download time."""
+    rows = _fetch_all_submissions()
+    cat_rows = [r for r in rows if str(r.get("food_category", "")).strip() == food_category]
+    if not cat_rows:
+        return {"count": 0, "averages": {d: 0.0 for d in DIMENSIONS}}
+    return {"count": len(cat_rows), "averages": _average_by_dimension(cat_rows)}
+
+
 # ===========================================================================
 # SESSION STATE INIT
 # ===========================================================================
@@ -909,7 +920,12 @@ def render_results() -> None:
         render_stories_tab(lang, answers, profile.get("food_category", "Dairy"))
 
     st.divider()
-    pdf_bytes = build_results_pdf(lang, profile, answers, framework, profile.get("food_category", "Dairy"))
+    food_category = profile.get("food_category", "Dairy")
+    audience = _audience_aggregate_for_category(food_category)
+    pdf_bytes = build_results_pdf(
+        lang, profile, answers, framework, food_category,
+        audience_averages=audience["averages"], audience_count=audience["count"],
+    )
     st.download_button(
         t(lang, "download_pdf"),
         data=pdf_bytes,

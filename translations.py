@@ -411,6 +411,7 @@ UI: dict[str, dict[str, str]] = {
         "radar_title": "#### Your current state vs. industry minimum viable status (MVS)",
         "series_current": "Your current state",
         "series_mvs": "Industry MVS",
+        "series_audience": "Audience average (n={count})",
         "not_assessed_note": "Dimensions marked as \"I don't know\" are excluded from the chart and calculations.",
         "mvs_info_title": "ℹ️ What is the minimum viable status (MVS)?",
         "mvs_info_body": (
@@ -503,6 +504,7 @@ UI: dict[str, dict[str, str]] = {
         "radar_title": "#### Tu estado actual vs. estado mínimo viable de la industria (MVS)",
         "series_current": "Tu estado actual",
         "series_mvs": "MVS de la industria",
+        "series_audience": "Promedio del auditorio (n={count})",
         "not_assessed_note": "Las dimensiones marcadas como \"No sé\" se excluyen de la gráfica y los cálculos.",
         "mvs_info_title": "ℹ️ ¿Qué es el estado mínimo viable (MVS)?",
         "mvs_info_body": (

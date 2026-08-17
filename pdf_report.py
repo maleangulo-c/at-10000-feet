@@ -51,6 +51,7 @@ GRAY_BG_RGB = (248, 249, 250)  # F8F9FA — neutral fills (category bars, contac
 
 PRIMARY_RGB = NAVY_RGB
 REFERENCE_RED_RGB = RED_RGB
+AUDIENCE_RGB = GREEN_RGB       # audience-average radar series (distinct from MVS red / current navy)
 BODY_TEXT_RGB = (35, 35, 35)
 GRAY_RGB = (105, 103, 101)
 LIGHT_FILL_RGB = GRAY_BG_RGB
@@ -230,7 +231,10 @@ def _section_title(pdf: FPDF, text: str) -> None:
 # browser / Kaleido at render time, but mirrors render_radar's geometry
 # (clockwise from 12 o'clock) and legend, in the brand palette.
 # ===========================================================================
-def _draw_radar_chart(pdf: FPDF, lang: str, answers: dict, framework: dict) -> None:
+def _draw_radar_chart(
+    pdf: FPDF, lang: str, answers: dict, framework: dict,
+    audience_averages: dict | None = None, audience_count: int = 0,
+) -> None:
     dims = dl.DIMENSIONS
     n = len(dims)
     radius = 24.0
@@ -275,6 +279,14 @@ def _draw_radar_chart(pdf: FPDF, lang: str, answers: dict, framework: dict) -> N
     for x, y in mvs_pts:
         pdf.ellipse(x - 1.1, y - 1.1, 2.2, 2.2, style="F")
 
+    has_audience = bool(audience_averages) and audience_count > 0
+    if has_audience:
+        aud_vals = [audience_averages.get(d, 0) for d in dims]
+        aud_pts = _draw_polygon(aud_vals, AUDIENCE_RGB)
+        pdf.set_fill_color(*AUDIENCE_RGB)
+        for x, y in aud_pts:
+            pdf.ellipse(x - 1.1, y - 1.1, 2.2, 2.2, style="F")
+
     cur_vals = [answers.get(d, 0) for d in dims]
     cur_pts = _draw_polygon(cur_vals, PRIMARY_RGB)
     for i, (x, y) in enumerate(cur_pts):
@@ -296,7 +308,12 @@ def _draw_radar_chart(pdf: FPDF, lang: str, answers: dict, framework: dict) -> N
     # Legend
     legend_y = cy + radius + 9
     pdf.set_font(FONT_FAMILY, "", 8.5)
-    legend_items = [(t(lang, "series_mvs"), REFERENCE_RED_RGB), (t(lang, "series_current"), PRIMARY_RGB)]
+    legend_items = [(t(lang, "series_mvs"), REFERENCE_RED_RGB)]
+    if has_audience:
+        legend_items.append(
+            (t(lang, "series_audience", count=audience_count), AUDIENCE_RGB)
+        )
+    legend_items.append((t(lang, "series_current"), PRIMARY_RGB))
     swatch, gap, item_gap = 3.2, 2, 10
     widths = [swatch + gap + pdf.get_string_width(_safe(txt)) + 2 for txt, _ in legend_items]
     total_w = sum(widths) + item_gap * (len(legend_items) - 1)
@@ -489,7 +506,8 @@ def _draw_contact_box(pdf: FPDF, lang: str) -> None:
 
 
 def build_results_pdf(
-    lang: str, profile: dict, answers: dict, framework: dict, food_category: str
+    lang: str, profile: dict, answers: dict, framework: dict, food_category: str,
+    audience_averages: dict | None = None, audience_count: int = 0,
 ) -> bytes:
     pdf = _ReportPDF(format="A4", unit="mm")
     pdf.set_auto_page_break(auto=True, margin=MARGIN)
@@ -514,7 +532,7 @@ def build_results_pdf(
 
     # --- Radar chart: current state vs. MVS ---------------------------------
     _section_title(pdf, t(lang, "radar_title").replace("#", "").strip())
-    _draw_radar_chart(pdf, lang, answers, framework)
+    _draw_radar_chart(pdf, lang, answers, framework, audience_averages, audience_count)
 
     for dim in dl.DIMENSIONS:
         score = answers.get(dim, 0)
