@@ -74,18 +74,17 @@ PAGE_HEIGHT = 297
 MARGIN = 25.4
 CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN
 
-CONTACT_EMAIL = "contacto@factoryos.com"  # placeholder — swap for the real address
 NEXT_STEPS_TITLE = {
     "en": "Next steps by priority category and recommended solutions",
     "es": "Próximos pasos por categoría priorizada y soluciones recomendadas",
 }
 CONTACT_BOX_TEXT = {
-    "en": f"For more information on implementing these solutions with FactoryOS, write to {CONTACT_EMAIL}",
-    "es": f"Para más información sobre cómo implementar estas soluciones con FactoryOS escribe a {CONTACT_EMAIL}",
+    "en": "For more information on implementing these automation solutions, reach out to your Tetra Pak commercial contact",
+    "es": "Para más información sobre cómo implementar estas soluciones de automatización, escríbele a tu contacto comercial en Tetra Pak",
 }
 STORIES_LINK_HINT = {
-    "en": "Tip: Cmd/Ctrl + click a link to open it in a new tab without losing this PDF.",
-    "es": "Tip: usa Cmd/Ctrl + clic sobre un enlace para abrirlo en una pestaña nueva sin perder este PDF.",
+    "en": "Tip: press and hold a link (or Cmd/Ctrl + click on a computer) to open it in a new tab without losing this PDF.",
+    "es": "Tip: mantén presionado un enlace (o usa Cmd/Ctrl + clic en una computadora) para abrirlo en una pestaña nueva sin perder este PDF.",
 }
 
 
