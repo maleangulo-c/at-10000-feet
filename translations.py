@@ -380,13 +380,18 @@ UI: dict[str, dict[str, str]] = {
         "food_category": "Category *",
         "invalid_email": "Please enter a valid email address.",
         "next": "Next →",
-        "motivation_question": "What is your biggest motivation to advance in the intelligent transition?",
+        "motivation_section_header": "Help us better understand your priorities.",
+        "motivation_section_subheader": (
+            "These answers are optional and will not affect your assessment results. "
+            "**Optional Questions.**"
+        ),
+        "motivation_question": "Motivation: What business outcome are you hoping to achieve through digital transformation?",
         "motivation_optional": "(optional)",
         "motivation_placeholder": "Write your answer here...",
-        "investment_approach_question": (
-            "What is your current investment approach for automation and digital "
-            "initiatives? Are investments primarily triggered by operational issues, "
-            "or guided by a clear vision and roadmap for future competitiveness?"
+        "investment_approach_question": "Investment approach: How does your organization currently prioritize automation and digital investments?",
+        "investment_approach_subtitle": (
+            "Are investments primarily driven by immediate operational needs, or by a "
+            "longer-term business and transformation roadmap?"
         ),
         "investment_approach_placeholder": "Write your answer here...",
         "continue": "Continue",
@@ -472,14 +477,19 @@ UI: dict[str, dict[str, str]] = {
         "food_category": "Categoría *",
         "invalid_email": "Por favor ingresa un correo electrónico válido.",
         "next": "Siguiente →",
-        "motivation_question": "¿Cuál es tu mayor motivación para avanzar en la transición inteligente?",
+        "motivation_section_header": "Ayúdanos a entender mejor tus prioridades.",
+        "motivation_section_subheader": (
+            "Estas respuestas son opcionales y no afectarán los resultados de tu "
+            "evaluación. **Preguntas opcionales.**"
+        ),
+        "motivation_question": "Motivación: ¿Qué resultado de negocio esperas lograr a través de la transformación digital?",
         "motivation_optional": "(opcional)",
         "motivation_placeholder": "Escribe tu respuesta aquí...",
-        "investment_approach_question": (
-            "¿Cuál es tu enfoque actual de inversión en automatización e iniciativas "
-            "digitales? ¿Las inversiones se disparan principalmente por problemas "
-            "operativos, o se guían por una visión clara y una hoja de ruta para la "
-            "competitividad futura?"
+        "investment_approach_question": "Enfoque de inversión: ¿Cómo prioriza actualmente tu organización la automatización y las inversiones digitales?",
+        "investment_approach_subtitle": (
+            "¿Las inversiones están impulsadas principalmente por necesidades "
+            "operativas inmediatas, o por una hoja de ruta de negocio y "
+            "transformación a más largo plazo?"
         ),
         "investment_approach_placeholder": "Escribe tu respuesta aquí...",
         "continue": "Continuar",

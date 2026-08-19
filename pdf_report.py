@@ -254,11 +254,8 @@ def _draw_radar_chart(
     pdf.set_draw_color(*RADAR_TRACK_RGB)
     pdf.set_line_width(0.25)
     for ring in range(1, 6):
-        pts = [pt(i, ring) for i in range(n)]
-        for i in range(n):
-            x1, y1 = pts[i]
-            x2, y2 = pts[(i + 1) % n]
-            pdf.line(x1, y1, x2, y2)
+        r = radius * (ring / 5)
+        pdf.ellipse(cx - r, cy - r, 2 * r, 2 * r, style="D")
     for i in range(n):
         x, y = pt(i, 5)
         pdf.line(cx, cy, x, y)

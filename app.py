@@ -64,17 +64,6 @@ GREEN_BORDER = "#2E9E4F"
 GREEN_TEXT = "#1C6B34"
 RADAR_TRACK_COLOR = "#E3E6EA"
 
-# Categorical palette for the audience/live radar (one line per food category).
-# Fixed hue order — validated for adjacent-pair colorblind-safe separation.
-CATEGORY_COLORS: dict[str, str] = {
-    "Dairy": "#2a78d6",       # blue
-    "Beverage": "#eb6834",    # orange
-    "Cheese": "#1baf7a",      # aqua
-    "Ice Cream": "#eda100",   # yellow
-    "Other": "#e87ba4",       # magenta
-}
-
-
 # ===========================================================================
 # ANALYTICS — persistence
 # ===========================================================================
@@ -236,27 +225,18 @@ def _average_by_dimension(rows: list[dict]) -> dict:
 
 
 def _compute_live_aggregate() -> dict:
-    """Average maturity level per dimension across every submission so far,
-    both overall and broken down per food category."""
+    """Average maturity level per dimension across every submission so far."""
     rows = _fetch_all_submissions()
     count = len(rows)
     if count == 0:
         return {
             "count": 0,
             "averages": {d: 0.0 for d in DIMENSIONS},
-            "by_category": {},
         }
-
-    by_category = {}
-    for cat in FOOD_CATEGORIES:
-        cat_rows = [r for r in rows if str(r.get("food_category", "")).strip() == cat]
-        if cat_rows:
-            by_category[cat] = {"count": len(cat_rows), "averages": _average_by_dimension(cat_rows)}
 
     return {
         "count": count,
         "averages": _average_by_dimension(rows),
-        "by_category": by_category,
     }
 
 
@@ -412,24 +392,34 @@ def render_motivation() -> None:
     lang = st.session_state["lang"]
     profile = st.session_state["profile"]
 
-    st.subheader(f"{t(lang, 'motivation_question')} {t(lang, 'motivation_optional')}")
+    st.markdown(f"#### {t(lang, 'motivation_section_header')}")
+    st.markdown(
+        f"<span style='color:gray; font-size:0.9em;'>{t(lang, 'motivation_section_subheader')}</span>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(f"**{t(lang, 'motivation_question')}**")
     motivation = st.text_area(
         t(lang, "motivation_question"),
         value=profile.get("motivation", ""),
         placeholder=t(lang, "motivation_placeholder"),
         key="in_motivation",
         label_visibility="collapsed",
-        height=150,
+        height=100,
     )
 
-    st.subheader(f"{t(lang, 'investment_approach_question')} {t(lang, 'motivation_optional')}")
+    st.markdown(f"**{t(lang, 'investment_approach_question')}**")
+    st.markdown(
+        f"<span style='color:gray; font-size:0.85em;'>{t(lang, 'investment_approach_subtitle')}</span>",
+        unsafe_allow_html=True,
+    )
     investment_approach = st.text_area(
         t(lang, "investment_approach_question"),
         value=profile.get("investment_approach", ""),
         placeholder=t(lang, "investment_approach_placeholder"),
         key="in_investment_approach",
         label_visibility="collapsed",
-        height=150,
+        height=100,
     )
 
     cols = st.columns([1, 3])
@@ -662,61 +652,6 @@ def render_radar(lang: str, answers: dict, framework: dict) -> None:
         legend=dict(orientation="h", y=-0.1, x=0.2, font=dict(color=NAVY_TEXT)),
         margin=dict(l=80, r=80, t=50, b=50),
         height=480,
-        paper_bgcolor="#FFFFFF",
-    )
-    st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
-
-
-def render_category_radar(lang: str, by_category: dict) -> None:
-    """Same pentagon spider chart as render_radar, but with one outlined
-    polygon per food category (in a fixed, colorblind-safe color order)
-    instead of a single participant-vs-MVS pair — used on the live/audience
-    aggregate view so each category's average maturity is visible at once."""
-    n = len(DIMENSIONS)
-    centers = [i * 360 / n for i in range(n)]
-    labels = [f"{DIMENSION_ICONS[d]}<br>{DIMENSION_NAMES[lang][d]}" for d in DIMENSIONS]
-    theta_closed = centers + [centers[0]]
-    customdata = [DIMENSION_NAMES[lang][d] for d in DIMENSIONS] + [DIMENSION_NAMES[lang][DIMENSIONS[0]]]
-
-    fig = go.Figure()
-
-    for cat in FOOD_CATEGORIES:
-        if cat not in by_category:
-            continue
-        cat_data = by_category[cat]
-        values = [cat_data["averages"][d] for d in DIMENSIONS]
-        values_closed = values + [values[0]]
-        color = CATEGORY_COLORS[cat]
-        cat_label = food_category_label(lang, cat)
-        fig.add_trace(
-            go.Scatterpolar(
-                r=values_closed, theta=theta_closed, mode="lines+markers",
-                line=dict(color=color, width=3),
-                marker=dict(color=color, size=9),
-                name=f"{cat_label} (n={cat_data['count']})",
-                customdata=customdata,
-                hovertemplate="%{customdata} — " + cat_label + ": %{r}/5<extra></extra>",
-            )
-        )
-
-    fig.update_layout(
-        polar=dict(
-            radialaxis=dict(
-                range=[0, 5], tickvals=[1, 2, 3, 4, 5], showticklabels=True,
-                gridcolor=RADAR_TRACK_COLOR, linecolor=RADAR_TRACK_COLOR,
-                tickfont=dict(size=11, color="#666666"),
-            ),
-            angularaxis=dict(
-                tickmode="array", tickvals=centers, ticktext=labels,
-                direction="clockwise", rotation=90, showgrid=True, gridcolor=RADAR_TRACK_COLOR,
-                linecolor=RADAR_TRACK_COLOR, tickfont=dict(size=14, color=NAVY_TEXT),
-            ),
-            bgcolor="#FFFFFF",
-        ),
-        showlegend=True,
-        legend=dict(orientation="h", y=-0.15, x=0.5, xanchor="center", font=dict(color=NAVY_TEXT)),
-        margin=dict(l=80, r=80, t=50, b=50),
-        height=520,
         paper_bgcolor="#FFFFFF",
     )
     st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
@@ -963,7 +898,9 @@ def render_live_results() -> None:
             return
 
         st.caption(t(lang, "live_count", count=agg["count"]))
-        render_category_radar(lang, agg["by_category"])
+        framework = dl.load_workbook_data()["framework"]
+        synthetic_answers = {d: agg["averages"][d] for d in DIMENSIONS}
+        render_radar(lang, synthetic_answers, framework)
 
     _live_fragment()
 
