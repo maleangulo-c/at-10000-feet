@@ -19,6 +19,7 @@ Run locally:
 from __future__ import annotations
 
 import csv
+import json
 import os
 import re
 from datetime import datetime, timezone
@@ -35,17 +36,20 @@ from translations import (
     DIMENSION_PRIORITY,
     FALLBACK_SOLUTIONS,
     KPI_DESCRIPTIONS,
-    KPI_DIMENSIONS,
     KPI_LABELS,
     UI,
     food_category_label,
+    solution_name_label,
     t,
     translate_fw,
 )
 
 DIMENSIONS: list[str] = dl.DIMENSIONS  # ["strategy", "people", "operations", "connectivity", "intelligence"]
 
-FOOD_CATEGORIES = ["Dairy", "Beverage", "Cheese", "Ice Cream", "Other"]
+# As of the Tetra Pak MX dry-run feedback, "Cheese" and "Ice Cream" were
+# consolidated/removed — 4 categories now (see FOOD_CATEGORY_TO_SUBSECTOR /
+# FOOD_CATEGORY_NAMES for the corresponding MVS-savings and label updates).
+FOOD_CATEGORIES = ["Dairy", "Beverage", "Prepared food", "Other"]
 
 
 # ===========================================================================
@@ -254,14 +258,92 @@ def _audience_aggregate_for_category(food_category: str) -> dict:
 # ===========================================================================
 # SESSION STATE INIT
 # ===========================================================================
+# Streamlit's session state lives server-side, tied to one WebSocket
+# connection — it does NOT survive a full page reload. On mobile, a native
+# "back" gesture/button (iOS swipe-back, Android system back) or the browser
+# simply re-navigating to the app's URL tears down that connection and
+# starts a brand-new session from scratch, which is what dry-run testers saw
+# as "the back button erases all my progress" (reported on iOS and Android).
+# Streamlit has no client-side router to intercept that navigation, so it
+# can't be fixed outright — but we can make a reload less destructive by
+# mirroring *non-PII* navigation state (screen, language, dim_index,
+# assessment answers) into the URL's query params (see
+# _sync_nav_state_to_url/_restore_nav_state_from_url below) and restoring
+# from there when a fresh session shows up with no state of its own. Profile
+# fields (name/company/email/motivation/investment_approach) are deliberately
+# left out of the URL — they're quick to re-type, and putting PII in a URL
+# risks it leaking via browser history or server access logs. This is a
+# partial mitigation, not a full fix: a *genuine* browser-back navigation
+# away from the app's own URL (e.g. to whatever page linked into it) is a
+# real page unload, not just a state reset, and cannot be intercepted from
+# server-side Streamlit code. Manual testing on Safari iOS / Chrome Android
+# is still recommended before relying on this for a live event.
+_QP_KEY = "s"
+
+
+def _serialize_nav_state() -> str:
+    payload = {
+        "screen": st.session_state.get("screen", "welcome"),
+        "lang": st.session_state.get("lang", "es"),
+        "dim_index": st.session_state.get("dim_index", 0),
+        "answers": st.session_state.get("answers", {}),
+        "touched_dims": sorted(st.session_state.get("touched_dims", set())),
+    }
+    return json.dumps(payload, separators=(",", ":"))
+
+
+def _sync_nav_state_to_url() -> None:
+    try:
+        st.query_params[_QP_KEY] = _serialize_nav_state()
+    except Exception:  # noqa: BLE001 — never block rendering on this
+        pass
+
+
+def _restore_nav_state_from_url() -> bool:
+    raw = st.query_params.get(_QP_KEY)
+    if not raw:
+        return False
+    try:
+        payload = json.loads(raw)
+    except (ValueError, TypeError):
+        return False
+    screen = payload.get("screen")
+    if screen not in ("welcome", "profile", "motivation", "assessment", "results"):
+        return False
+    st.session_state["screen"] = screen
+    st.session_state["lang"] = payload.get("lang") or "es"
+    st.session_state["dim_index"] = payload.get("dim_index", 0)
+    answers = payload.get("answers") or {}
+    st.session_state["answers"] = {d: int(answers.get(d, 1)) for d in DIMENSIONS}
+    st.session_state["touched_dims"] = set(payload.get("touched_dims", []))
+    return True
+
+
+def _clear_nav_state_url() -> None:
+    try:
+        if _QP_KEY in st.query_params:
+            del st.query_params[_QP_KEY]
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def init_state() -> None:
-    st.session_state.setdefault("screen", "welcome")
-    st.session_state.setdefault("lang", "en")
+    if "screen" not in st.session_state:
+        if not _restore_nav_state_from_url():
+            st.session_state["screen"] = "welcome"
+    st.session_state.setdefault("lang", "es")
     st.session_state.setdefault("profile", {})
     st.session_state.setdefault("dim_index", 0)
     if "answers" not in st.session_state:
         st.session_state["answers"] = {d: 1 for d in DIMENSIONS}
     st.session_state.setdefault("touched_dims", set())
+
+    # A restored screen past the registration step needs profile data we
+    # deliberately don't persist in the URL — if it's missing (a real reload
+    # wiped session_state and only the URL survived), send the user back to
+    # re-enter it rather than rendering a broken assessment/results screen.
+    if st.session_state["screen"] in ("motivation", "assessment", "results") and not st.session_state["profile"].get("name"):
+        st.session_state["screen"] = "profile"
 
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -657,36 +739,52 @@ def render_radar(lang: str, answers: dict, framework: dict) -> None:
     st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
 
 
-def _savings_table_html(lang: str, answers: dict, framework: dict, food_category: str) -> str:
+def _savings_block_html(lang: str, answers: dict, framework: dict, food_category: str) -> str:
+    """The KPI table, its section title and clarifying legend, all wrapped in
+    one shaded/bordered container so it reads as an industry-reference block
+    rather than a personalized outcome of the answers the user just gave —
+    it isn't tied to any dimension the user scored, just to their food
+    category (see savings_legend / savings_title copy)."""
     savings = dl.savings_row_for_category(dl.load_workbook_data()["mvs_savings"], food_category)
 
     rows = []
     for kpi in ["oee", "quality", "energy", "stock"]:
-        relevant = KPI_DIMENSIONS[kpi]
-        assessed_relevant = [d for d in relevant if answers[d] > 0]
-        if not assessed_relevant:
-            value = t(lang, "not_assessed_kpi")
-        elif all(answers[d] >= framework[d]["mvs"] for d in assessed_relevant):
-            value = t(lang, "already_at_mvs")
-        else:
-            value = savings.get(kpi, "")
+        value = savings.get(kpi, "")
         rows.append(
-            '<tr><td style="padding:8px 10px;border-bottom:1px solid #E5E5E5;">'
+            '<tr><td style="padding:8px 10px;border-bottom:1px solid #DADFE5;">'
             f'<div style="font-weight:600;">{KPI_LABELS[lang][kpi]}</div>'
             f'<div style="color:#777;font-size:0.82rem;margin-top:2px;">{KPI_DESCRIPTIONS[lang][kpi]}</div>'
             "</td>"
-            f'<td style="padding:8px 10px;border-bottom:1px solid #E5E5E5;font-weight:700;color:{PRIMARY};">{value}</td></tr>'
+            f'<td style="padding:8px 10px;border-bottom:1px solid #DADFE5;font-weight:700;color:{PRIMARY};">{value}</td></tr>'
         )
 
     table = (
-        '<table style="border-collapse:collapse;width:100%;font-size:0.94rem;">'
+        '<table style="border-collapse:collapse;width:100%;font-size:0.94rem;background:#FFFFFF;">'
         '<thead><tr style="border-bottom:2px solid #ccc;">'
         f'<th style="text-align:left;padding:8px 10px;">{t(lang, "savings_kpi_col")}</th>'
         f'<th style="text-align:left;padding:8px 10px;">{t(lang, "savings_value_col")}</th>'
         "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
     )
-    footnote = f'<p style="color:#888;font-size:0.78rem;margin-top:8px;">{t(lang, "savings_footnote")}</p>'
-    return table + footnote
+
+    title = t(lang, "savings_title").replace("#", "").strip()
+    legend = t(lang, "savings_legend")
+    # savings_caption's "**{category}**" is markdown bold meant for st.caption
+    # — this block is one raw HTML string instead, so convert the single
+    # bold pair to a real <strong> tag rather than leaving "**" as literal text.
+    caption = t(lang, "savings_caption", category=food_category_label(lang, food_category))
+    caption = caption.replace("**", "<strong>", 1).replace("**", "</strong>", 1)
+    footnote = t(lang, "savings_footnote")
+
+    return (
+        '<div style="background:#EEF0F3;border:1px solid #DADFE5;border-radius:12px;'
+        'padding:22px 26px;margin-top:6px;">'
+        f'<div style="font-size:1.15rem;font-weight:700;color:{NAVY_TEXT};margin-bottom:8px;">{title}</div>'
+        f'<div style="color:#555;font-size:0.9rem;margin-bottom:14px;line-height:1.45;">{legend}</div>'
+        f'<div style="color:#777;font-size:0.85rem;margin-bottom:10px;">{caption}</div>'
+        + table
+        + f'<p style="color:#888;font-size:0.78rem;margin-top:10px;">{footnote}</p>'
+        + "</div>"
+    )
 
 
 def render_overview_tab(lang: str, answers: dict, framework: dict, food_category: str) -> None:
@@ -696,10 +794,12 @@ def render_overview_tab(lang: str, answers: dict, framework: dict, food_category
         st.caption(t(lang, "not_assessed_note"))
     st.info(f"**{t(lang, 'mvs_info_title')}** — {t(lang, 'mvs_info_body')}")
 
+    # The KPI reference block gets its own divider + shaded container (see
+    # _savings_block_html) so it doesn't read as a consequence of the
+    # answers just given — it's an industry benchmark, not a personalized
+    # calculation (Tetra Pak MX dry-run feedback).
     st.divider()
-    st.markdown(t(lang, "savings_title"))
-    st.caption(t(lang, "savings_caption", category=food_category_label(lang, food_category)))
-    st.markdown(_savings_table_html(lang, answers, framework, food_category), unsafe_allow_html=True)
+    st.markdown(_savings_block_html(lang, answers, framework, food_category), unsafe_allow_html=True)
 
 
 # ===========================================================================
@@ -766,7 +866,7 @@ def render_recommendations_tab(lang: str, answers: dict, framework: dict) -> Non
                 st.markdown(
                     f'<div style="margin:6px 0;">'
                     f'<span style="margin-right:6px;">✅</span>'
-                    f'<span style="font-weight:700;">{s["name"]}</span><br>'
+                    f'<span style="font-weight:700;">{solution_name_label(lang, s["name"])}</span><br>'
                     f'<span style="color:#555;font-size:0.9rem;">{translate_fw(lang, s["vp"])}</span></div>',
                     unsafe_allow_html=True,
                 )
@@ -823,7 +923,13 @@ def render_stories_tab(lang: str, answers: dict, food_category: str) -> None:
         for s in stories:
             if shown >= 6:
                 break
-            st.markdown(f'📄 [{s["customer"]}]({s["url"]})')
+            # Link to the ES-localized story when the app is in Spanish and
+            # one is mapped in the workbook, else fall back to the EN link.
+            # TODO: the ES links come from the "Casos de éxito MX" workbook's
+            # "Link ES" column as-is — not yet manually spot-checked that
+            # every one resolves to a live es-mx tetrapak.com page.
+            url = s["url_es"] if lang == "es" else s["url"]
+            st.markdown(f'📄 [{s["customer"]}]({url})')
             shown += 1
 
     if shown == 0:
@@ -879,6 +985,7 @@ def render_results() -> None:
             st.session_state.clear()
             if keep_ws is not None:
                 st.session_state["gs_worksheet"] = keep_ws
+            _clear_nav_state_url()
             st.rerun()
 
 
@@ -950,6 +1057,8 @@ def main() -> None:
         render_assessment_step()
     else:
         render_results()
+
+    _sync_nav_state_to_url()
 
 
 if __name__ == "__main__":

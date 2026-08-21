@@ -36,15 +36,13 @@ FOOD_CATEGORY_NAMES: dict[str, dict[str, str]] = {
     "en": {
         "Dairy": "Dairy",
         "Beverage": "Beverage",
-        "Cheese": "Cheese",
-        "Ice Cream": "Ice Cream",
+        "Prepared food": "Prepared food",
         "Other": "Other",
     },
     "es": {
         "Dairy": "Lácteos",
-        "Beverage": "Bebidas",
-        "Cheese": "Quesos",
-        "Ice Cream": "Helados",
+        "Beverage": "Bebidas (jugos, néctares y bebidas sin gas)",
+        "Prepared food": "Conservas",
         "Other": "Otros",
     },
 }
@@ -67,16 +65,16 @@ DIMENSION_ICONS: dict[str, str] = {
 
 KPI_LABELS: dict[str, dict[str, str]] = {
     "en": {
-        "oee": "Potential OEE Gains (MVS)",
-        "quality": "Potential Quality Cost Drop",
+        "oee": "Potential OEE Gains",
+        "quality": "Potential Quality Cost Drops",
         "energy": "Potential Energy Savings",
         "stock": "Stock Turnover Improvement",
     },
     "es": {
-        "oee": "Mejora de OEE",
-        "quality": "Reducción de Costos de Calidad",
-        "energy": "Ahorro de Energía",
-        "stock": "Mejora en Rotación de Inventario",
+        "oee": "Potencial mejora en la Eficiencia General de los Equipos (OEE)",
+        "quality": "Potencial de reducción de costos de calidad",
+        "energy": "Ahorro potencial de Energía",
+        "stock": "Mejora de la rotación de inventario",
     },
 }
 
@@ -132,12 +130,17 @@ KPI_DESCRIPTIONS: dict[str, dict[str, str]] = {
 # English -> Spanish lookup for workbook-sourced text.
 # ---------------------------------------------------------------------------
 _ES_LOOKUP: dict[str, str] = {
-    # Dimension questions
-    "Are you investing in the right opportunities?": "¿Estás invirtiendo en las oportunidades correctas?",
-    "Can your people drive and sustain change?": "¿Tu gente puede impulsar y sostener el cambio?",
-    "Do you control and continuously improve operations?": "¿Controlas y mejoras continuamente tus operaciones?",
-    "Can information flow across our factory and business?": "¿Puede la información fluir a través de tu planta y tu negocio?",
-    "Can you turn information into business value?": "¿Puedes convertir la información en valor de negocio?",
+    # Dimension guide questions
+    "What is your organization currently doing to invest in the right automation and digitalization opportunities?":
+        "¿Qué está haciendo tu organización actualmente para invertir en las oportunidades correctas de automatización y digitalización?",
+    "What is your organization currently doing so that your people can drive and sustain change?":
+        "¿Qué está haciendo tu organización actualmente para que tus colaboradores puedan impulsar y sostener el cambio?",
+    "What is your organization currently doing to control and continuously improve its operations?":
+        "¿Qué está haciendo tu organización actualmente para controlar y mejorar continuamente sus operaciones?",
+    "What is your organization currently doing so that information flows across your production plant and your business?":
+        "¿Qué está haciendo tu organización actualmente para que la información fluya a través de tu planta de producción y tu negocio?",
+    "What is your organization currently doing to turn information into business value?":
+        "¿Qué está haciendo tu organización actualmente para convertir la información en valor de negocio?",
 
     # Strategy levels
     "No automation and digital strategy": "Sin estrategia de automatización y digital",
@@ -166,7 +169,8 @@ _ES_LOOKUP: dict[str, str] = {
     "Teams collaborate effectively across functions using digital tools and common processes.":
         "Los equipos colaboran eficazmente entre funciones usando herramientas digitales y procesos comunes.",
     "Leadership sponsorship": "Patrocinio del liderazgo",
-    "Leaders actively promote and support transformation.": "Los líderes promueven y respaldan activamente la transformación.",
+    "Leaders actively promote and support transformation.":
+        "Los líderes promueven y respaldan activamente la transformación mediante mecanismos y programas establecidos.",
     "Change management culture": "Cultura de gestión del cambio",
     "Change and digital adoption are embedded in the culture and continuously reinforced across the organization.":
         "El cambio y la adopción digital están integrados en la cultura y se refuerzan continuamente en toda la organización.",
@@ -345,6 +349,68 @@ KPI_DIMENSIONS: dict[str, list[str]] = {
 }
 
 
+# Solution names shown in bold on the Next Steps tab and the PDF (e.g.
+# "Production Scheduler") come from the "solutions bank" sheet's product
+# column and are English-only in the workbook, unlike the value props (which
+# already flow through translate_fw). Names are kept recognizable/consistent
+# with Tetra Pak's product naming rather than literally translated.
+SOLUTION_NAME_ES: dict[str, str] = {
+    "Production Scheduler": "Programador de Producción",
+    "Material Management": "Gestión de Materiales",
+    "Production Management": "Gestión de Producción",
+    "Production Control": "Control de Producción",
+    "Performance Studio": "Performance Studio",
+    "Quality Management": "Gestión de Calidad",
+    "Digital Standard Operating Procedures": "Procedimientos Operativos Estándar Digitales",
+    "Production Troubleshooting": "Resolución de Problemas de Producción",
+    "Batch Traceability report": "Reporte de Trazabilidad de Lotes",
+    "Batch Performance Report": "Reporte de Desempeño de Lotes",
+    "Digital Quality Reports": "Reportes Digitales de Calidad",
+    "Digital Core": "Núcleo Digital",
+    "Digital Bridge": "Puente Digital",
+    "Real-Time Performance Monitoring": "Monitoreo de Desempeño en Tiempo Real",
+    "KPI reports": "Reportes de KPI",
+    "Energy Management": "Gestión de Energía",
+    "Cheese Production Optimization": "Optimización de la Producción de Queso",
+    "Factory Agent": "Agente de Planta",
+    "Digital Operational Report": "Reporte Operativo Digital",
+    "CIP Performance Optimization": "Optimización del Desempeño de Limpieza CIP",
+    "Smart Receiving": "Recepción Inteligente",
+    "(Digital) Quality control": "Control de Calidad (Digital)",
+    "Workforce Skills Management": "Gestión de Habilidades del Personal",
+    "Digital Task management": "Gestión Digital de Tareas",
+    "Digital Issue management": "Gestión Digital de Incidencias",
+    "Connected Workforce Collaboration": "Colaboración Conectada del Personal",
+    "Digital Learning Platform": "Plataforma Digital de Aprendizaje",
+    "Workforce Training & Certification": "Capacitación y Certificación del Personal",
+    "Care-to-improve": "Programa Care-to-improve",
+    "Lifecycle assessment": "Evaluación de Ciclo de Vida",
+    "OT Infrastructure Assessment": "Evaluación de Infraestructura OT",
+    "Industrial Cybersecurity Assessment": "Evaluación de Ciberseguridad Industrial",
+    "Automation & Digital benchmarking": "Benchmarking de Automatización y Digital",
+    "Automation & Digital transformation assessment": "Evaluación de Transformación Digital y de Automatización",
+    "Lifecycle management": "Gestión de Ciclo de Vida",
+    "Central control room upgrade": "Actualización de Sala de Control Central",
+    "Smart manufacturing infrastructure": "Infraestructura de Manufactura Inteligente",
+    "Cybersecurity services": "Servicios de Ciberseguridad",
+    "Remote and on-site support": "Soporte Remoto y en Sitio",
+    "Asset Health monitoring": "Monitoreo de Salud de Activos",
+    "Plant integration": "Integración de Planta",
+    "Digital board": "Tablero Digital",
+}
+
+
+def solution_name_label(lang: str, name: str) -> str:
+    """Display label for a solutions-bank product name — falls back to the
+    original (English) name if lang == 'en' or no translation is registered,
+    so a new solution added to the workbook degrades gracefully."""
+    if not name:
+        return name
+    if lang == "en":
+        return name
+    return SOLUTION_NAME_ES.get(name.strip(), name)
+
+
 def translate_fw(lang: str, text: str) -> str:
     """Translate a workbook-sourced string. Falls back to the original
     English text (never crashes) if lang == 'en' or no translation exists."""
@@ -387,7 +453,7 @@ UI: dict[str, dict[str, str]] = {
         ),
         "motivation_question": "Motivation: What business outcome are you hoping to achieve through digital transformation?",
         "motivation_optional": "(optional)",
-        "motivation_placeholder": "Write your answer here...",
+        "motivation_placeholder": "e.g. increase profitability",
         "investment_approach_question": "Investment approach: How does your organization currently prioritize automation and digital investments?",
         "investment_approach_subtitle": (
             "Are investments primarily driven by immediate operational needs, or by a "
@@ -398,11 +464,12 @@ UI: dict[str, dict[str, str]] = {
         "back": "← Back",
         "step_of": "Step {step} of {total}",
         "assessment_instruction": (
-            "**Choose the level/statement you identify with most right now.** "
-            "Read all the options below and select the single description that "
-            "best matches how your operation actually works today — not where "
-            "you'd like to be. There are no right or wrong answers; if none of "
-            "the statements fit, pick \"Don't know / Skip.\""
+            "Please select the maturity level that most closely matches your "
+            "company's overall status. Read all the options below and select "
+            "the single description that best reflects how your operation "
+            "actually works today — not how you'd like it to be. There are no "
+            "right or wrong answers; if none of the options apply, pick "
+            "\"Don't know / Skip.\""
         ),
         "dont_know": "I don't know / I don't want to rate this dimension",
         "level0_label": "Don't know / skip",
@@ -423,12 +490,17 @@ UI: dict[str, dict[str, str]] = {
             "A World Economic Forum benchmark defining the minimum maturity level needed "
             "to remain competitive in your industry."
         ),
-        "savings_title": "#### Potential saving related to MVS",
+        "savings_title": "#### What companies that reached the Minimum Viable Status have achieved",
+        "savings_legend": (
+            "These figures are not based on your specific answers. They are examples "
+            "of improvement reported by the World Economic Forum's Global Lighthouse "
+            "Network once they reached the minimum viable status in a balanced way "
+            "across all 5 dimensions. They show the kind of business impact that "
+            "usually comes from advancing holistically, not just in a single area."
+        ),
         "savings_caption": "Indicative estimates for **{category}** segment:",
         "savings_kpi_col": "KPI",
-        "savings_value_col": "potential improvement",
-        "already_at_mvs": "Already at or above MVS",
-        "not_assessed_kpi": "Not assessed — excluded",
+        "savings_value_col": "Potential saving related to MVS",
         "savings_footnote": (
             "Improvement ranges are based on the World Economic Forum's Global "
             "Lighthouse Network, a community of manufacturing sites recognized "
@@ -484,7 +556,7 @@ UI: dict[str, dict[str, str]] = {
         ),
         "motivation_question": "Motivación: ¿Qué resultado de negocio esperas lograr a través de la transformación digital?",
         "motivation_optional": "(opcional)",
-        "motivation_placeholder": "Escribe tu respuesta aquí...",
+        "motivation_placeholder": "p. ej. incrementar la utilidad",
         "investment_approach_question": "Enfoque de inversión: ¿Cómo prioriza actualmente tu organización la automatización y las inversiones digitales?",
         "investment_approach_subtitle": (
             "¿Las inversiones están impulsadas principalmente por necesidades "
@@ -496,10 +568,11 @@ UI: dict[str, dict[str, str]] = {
         "back": "← Atrás",
         "step_of": "Paso {step} de {total}",
         "assessment_instruction": (
-            "**Elige el nivel/statement con el que más te identificas actualmente.** "
-            "Lee todas las opciones a continuación y selecciona la única descripción "
-            "que mejor refleje cómo funciona realmente tu operación hoy, no cómo te "
-            "gustaría que fuera. No hay respuestas correctas o incorrectas; si ninguna "
+            "Por favor selecciona el nivel de desarrollo que más se acerque al "
+            "estatus general de tu compañía. Lee todas las opciones a "
+            "continuación y selecciona la única descripción que mejor refleje "
+            "cómo funciona realmente tu operación hoy, no cómo te gustaría que "
+            "fuera. No hay respuestas correctas o incorrectas; si ninguna "
             "opción aplica, elige \"No sé / Omitir\"."
         ),
         "dont_know": "No sé / no quiero calificar esta dimensión",
@@ -521,12 +594,18 @@ UI: dict[str, dict[str, str]] = {
             "Un referente del Foro Económico Mundial que define el nivel mínimo de madurez "
             "necesario para mantenerte competitivo en tu industria."
         ),
-        "savings_title": "#### Oportunidad de mejora potencial al alcanzar el MVS",
+        "savings_title": "#### Lo que han logrado empresas que ya alcanzaron el nivel mínimo viable",
+        "savings_legend": (
+            "Estas cifras no se basan en tus respuestas específicas. Son ejemplos de "
+            "mejora reportados por la red Global Lighthouse Network del Foro "
+            "Económico Mundial, una vez que alcanzaron el nivel mínimo viable de "
+            "forma balanceada en las 5 dimensiones. Te muestran el tipo de impacto "
+            "de negocio que suele generar avanzar de forma integral, no solo en un "
+            "área."
+        ),
         "savings_caption": "Estimaciones indicativas para el segmento **{category}**:",
         "savings_kpi_col": "KPI",
-        "savings_value_col": "Mejora para alcanzar el MVS",
-        "already_at_mvs": "Ya alcanzaste o superaste el MVS",
-        "not_assessed_kpi": "No evaluado — excluido",
+        "savings_value_col": "Ahorro potencial relacionado con MVS",
         "savings_footnote": (
             "Los rangos de mejora se basan en el Global Lighthouse Network del "
             "Foro Económico Mundial, una red de plantas de manufactura "

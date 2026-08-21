@@ -33,9 +33,9 @@ from translations import (
     DIMENSION_PRIORITY,
     FALLBACK_SOLUTIONS,
     KPI_DESCRIPTIONS,
-    KPI_DIMENSIONS,
     KPI_LABELS,
     food_category_label,
+    solution_name_label,
     t,
     translate_fw,
 )
@@ -79,8 +79,17 @@ NEXT_STEPS_TITLE = {
     "es": "Próximos pasos por categoría priorizada y soluciones recomendadas",
 }
 CONTACT_BOX_TEXT = {
-    "en": "For more information on implementing these automation solutions, reach out to your Tetra Pak commercial contact",
-    "es": "Para más información sobre cómo implementar estas soluciones de automatización, escríbele a tu contacto comercial en Tetra Pak",
+    "en": (
+        "For more information about implementing these automation solutions, "
+        "please contact your Tetra Pak sales representative. If you don't have "
+        "one assigned, you can write to Francisco.Solano@tetrapak.com"
+    ),
+    "es": (
+        "Para obtener más información sobre la implementación de estas "
+        "soluciones de automatización, ponte en contacto con tu representante "
+        "comercial de Tetra Pak. Si no tienes uno asignado, puedes escribir a "
+        "Francisco.Solano@tetrapak.com"
+    ),
 }
 STORIES_LINK_HINT = {
     "en": "Tip: press and hold a link (or Cmd/Ctrl + click on a computer) to open it in a new tab without losing this PDF.",
@@ -328,36 +337,41 @@ def _draw_radar_chart(
 # KPI improvement table — real bordered table (dynamic row heights) matching
 # the bordered HTML table in the app.
 # ===========================================================================
-def _draw_kpi_table(pdf: FPDF, lang: str, answers: dict, framework: dict, food_category: str) -> None:
+def _draw_kpi_table(pdf: FPDF, lang: str, food_category: str) -> None:
+    """Industry-reference KPI table — always shows the food category's
+    Global Lighthouse Network improvement range, independent of the
+    participant's own dimension scores (Tetra Pak MX dry-run feedback: this
+    table reads as a benchmark, not a personalized calculation)."""
     savings = dl.savings_row_for_category(dl.load_workbook_data()["mvs_savings"], food_category)
     col1_w = CONTENT_WIDTH * 0.66
     col2_w = CONTENT_WIDTH - col1_w
     inner_pad = 2.2
     label_h, desc_h, row_pad = 4.3, 3.6, 1.7
 
-    _ensure_space(pdf, 9)
+    # Header text (especially the right column) can run longer than its
+    # column width — compute wrapped line counts first so the header row
+    # grows to fit instead of the text silently overflowing past the border.
+    header_line_h = 4.5
+    pdf.set_font(FONT_FAMILY, "B", 9.5)
+    col1_header_lines = pdf.multi_cell(col1_w - 2 * inner_pad, header_line_h, _safe(t(lang, "savings_kpi_col")), split_only=True)
+    col2_header_lines = pdf.multi_cell(col2_w - 2 * inner_pad, header_line_h, _safe(t(lang, "savings_value_col")), split_only=True)
+    header_h = max(len(col1_header_lines), len(col2_header_lines)) * header_line_h + 2.5
+
+    _ensure_space(pdf, header_h)
     pdf.set_fill_color(*LIGHT_FILL_RGB)
     pdf.set_draw_color(*BORDER_GRAY_RGB)
     pdf.set_line_width(0.2)
     header_y = pdf.get_y()
-    pdf.rect(MARGIN, header_y, CONTENT_WIDTH, 7, style="DF")
-    pdf.set_font(FONT_FAMILY, "B", 9.5)
+    pdf.rect(MARGIN, header_y, CONTENT_WIDTH, header_h, style="DF")
     pdf.set_text_color(*NAVY_RGB)
     pdf.set_xy(MARGIN + inner_pad, header_y + 1.4)
-    pdf.cell(col1_w - inner_pad, 4.5, _safe(t(lang, "savings_kpi_col")))
+    _mc(pdf, col1_w - 2 * inner_pad, header_line_h, _safe(t(lang, "savings_kpi_col")), new_x="LEFT")
     pdf.set_xy(MARGIN + col1_w + inner_pad, header_y + 1.4)
-    pdf.cell(col2_w - inner_pad, 4.5, _safe(t(lang, "savings_value_col")))
-    pdf.set_y(header_y + 7)
+    _mc(pdf, col2_w - 2 * inner_pad, header_line_h, _safe(t(lang, "savings_value_col")), new_x="LEFT")
+    pdf.set_y(header_y + header_h)
 
     for kpi in ["oee", "quality", "energy", "stock"]:
-        relevant = KPI_DIMENSIONS[kpi]
-        assessed_relevant = [d for d in relevant if answers.get(d, 0) > 0]
-        if not assessed_relevant:
-            value = t(lang, "not_assessed_kpi")
-        elif all(answers[d] >= framework[d]["mvs"] for d in assessed_relevant):
-            value = t(lang, "already_at_mvs")
-        else:
-            value = savings.get(kpi, "")
+        value = savings.get(kpi, "")
 
         label = _safe(KPI_LABELS[lang][kpi])
         desc = _safe(KPI_DESCRIPTIONS[lang][kpi])
@@ -549,15 +563,17 @@ def build_results_pdf(
     pdf.set_text_color(*BODY_TEXT_RGB)
     pdf.ln(3)
 
-    # --- MVS savings opportunity ---------------------------------------------
+    # --- Industry-reference KPI table (see _draw_kpi_table) -----------------
     _section_title(pdf, t(lang, "savings_title").replace("#", "").strip())
     pdf.set_font(FONT_FAMILY, "", 9)
     pdf.set_text_color(*GRAY_RGB)
+    _mc(pdf, CONTENT_WIDTH, 4.6, _safe(t(lang, "savings_legend")))
+    pdf.ln(0.5)
     _mc(pdf, CONTENT_WIDTH, 4.6, _safe(t(lang, "savings_caption", category=food_category_label(lang, food_category))))
     pdf.set_text_color(*BODY_TEXT_RGB)
     pdf.ln(0.5)
 
-    _draw_kpi_table(pdf, lang, answers, framework, food_category)
+    _draw_kpi_table(pdf, lang, food_category)
 
     pdf.ln(1.5)
     pdf.set_font(FONT_FAMILY, "I", 7.5)
@@ -566,9 +582,14 @@ def build_results_pdf(
     pdf.set_text_color(*BODY_TEXT_RGB)
 
     # --- Next steps -------------------------------------------------------------
+    # No unconditional pdf.add_page() here: forcing a fresh page regardless of
+    # how much of the current one is still free wasted up to a whole page of
+    # blank space below the KPI table and reliably pushed the report past 3
+    # pages. _ensure_space just guarantees the section title doesn't end up
+    # orphaned alone at the bottom of a page.
     top = _top_recommendations(answers)
     if top:
-        pdf.add_page()
+        _ensure_space(pdf, 45)
         _section_title(pdf, NEXT_STEPS_TITLE[lang])
         pdf.ln(3)
         for idx, rec in enumerate(top):
@@ -600,7 +621,7 @@ def build_results_pdf(
                     _mc(pdf, CONTENT_WIDTH, 4.6, _safe(t(lang, "reco_solutions_heading")))
                 for s in solutions:
                     pdf.set_font(FONT_FAMILY, "B", 9)
-                    _mc(pdf, CONTENT_WIDTH, 4.4, _safe(f"- {s['name']}"))
+                    _mc(pdf, CONTENT_WIDTH, 4.4, _safe(f"- {solution_name_label(lang, s['name'])}"))
                     if s["vp"]:
                         pdf.set_font(FONT_FAMILY, "", 8.3)
                         pdf.set_text_color(*GRAY_RGB)
@@ -615,7 +636,7 @@ def build_results_pdf(
     # --- Customer stories ---------------------------------------------------
     stories = _top_stories(answers, food_category)
     if stories:
-        pdf.add_page()
+        _ensure_space(pdf, 30)
         _section_title(pdf, t(lang, "stories_title").replace("#", "").strip())
         pdf.set_font(FONT_FAMILY, "I", 8.5)
         pdf.set_text_color(*GRAY_RGB)
@@ -625,7 +646,10 @@ def build_results_pdf(
         pdf.set_font(FONT_FAMILY, "", 10)
         for s in stories:
             pdf.set_text_color(*NAVY_RGB)
-            _mc(pdf, CONTENT_WIDTH, 6, _safe(f"- {s['customer']}"), link=s["url"])
+            # TODO: see the matching TODO in app.py's render_stories_tab —
+            # ES story links aren't yet manually verified to all resolve.
+            url = s["url_es"] if lang == "es" else s["url"]
+            _mc(pdf, CONTENT_WIDTH, 6, _safe(f"- {s['customer']}"), link=url)
         pdf.set_text_color(*BODY_TEXT_RGB)
 
     # --- Contact box ----------------------------------------------------------

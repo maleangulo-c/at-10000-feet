@@ -22,6 +22,7 @@ import openpyxl
 import streamlit as st
 
 XLSX_PATH = os.path.join(os.path.dirname(__file__), "Digital_readiness_tool_Framework.xlsx")
+STORIES_XLSX_PATH = os.path.join(os.path.dirname(__file__), "Casos de éxito MX.xlsx")
 
 DIMENSIONS: list[str] = ["strategy", "people", "operations", "connectivity", "intelligence"]
 
@@ -36,16 +37,39 @@ _DIMENSION_NAME_MAP = {
 }
 
 # Food categories offered on the participant form, mapped to the "Industry
-# Sub-Sector" label used in the "MVS potential savings" sheet. "Other" has
-# no sensible single match, so it falls back to the average across all
-# rows (computed in _average_savings_row below).
+# Sub-Sector" label used in the "MVS potential savings" sheet. The form only
+# offers 4 categories (Dairy, Beverage, Prepared food, Other) — Cheese and
+# Ice Cream were removed as of the Tetra Pak MX dry-run feedback, so those
+# subsector rows are no longer referenced directly. "Prepared food" (canned/
+# preserved goods) has no dedicated subsector row in the workbook, so — like
+# "Other" — it falls back to the average across all rows (computed in
+# _average_savings_row below).
 FOOD_CATEGORY_TO_SUBSECTOR = {
     "Dairy": "Dairy Beverage",
     "Beverage": "Beverages (Non-Dairy)",
-    "Cheese": "Cheese & Whey",
-    "Ice Cream": "Ice Cream",
+    "Prepared food": "__AVERAGE__",
     "Other": "__AVERAGE__",
 }
+
+# Free-text "Food Category" values used in the customer-stories workbook,
+# normalized to the 4 categories offered on the participant form so the
+# story-selection logic's exact-match category scoring (see
+# _pick_stories_for_dimension in app.py) can still find matches. This is a
+# data-normalization step only — the selection logic itself is unchanged.
+_STORY_CATEGORY_NORMALIZATION = {
+    "dairy": "Dairy",
+    "fermented milk": "Dairy",
+    "milk and whey": "Dairy",
+    "cheese": "Dairy",
+    "juice": "Beverage",
+    "plant-based": "Beverage",
+    "liquid foods and beverages.": "Beverage",
+    "sauce producer": "Prepared food",
+}
+
+
+def _normalize_story_category(raw: str) -> str:
+    return _STORY_CATEGORY_NORMALIZATION.get((raw or "").strip().lower(), "Other")
 
 
 def _clean(v):
@@ -55,11 +79,12 @@ def _clean(v):
 @st.cache_resource(show_spinner=False)
 def load_workbook_data() -> dict:
     wb = openpyxl.load_workbook(XLSX_PATH, data_only=True)
+    stories_wb = openpyxl.load_workbook(STORIES_XLSX_PATH, data_only=True)
     return {
         "framework": _parse_framework(wb["framework"]),
         "mvs_savings": _parse_mvs_savings(wb["MVS potential savings"]),
         "solutions_bank": _parse_solutions_bank(wb["solutions bank"]),
-        "customer_stories": _parse_customer_stories(wb["customer stories bank"]),
+        "customer_stories": _parse_customer_stories(stories_wb["customer stories bank"]),
         "profiles": _parse_profiles(wb["profiles"]),
     }
 
@@ -218,7 +243,10 @@ def _parse_customer_stories(ws) -> list[dict]:
         if not name or name.strip().lower() == "logic":
             continue
         category = _clean(row[2].value)  # C
-        url = _clean(row[9].value)  # J
+        url_en = _clean(row[9].value)  # J
+        # "Link ES" (K) is new in the MX stories workbook — not every row has
+        # a localized version yet, so fall back to the EN link when blank.
+        url_es = _clean(row[10].value) if len(row) > 10 else None  # K
         for dim, col in _LEVEL_COLS.items():
             raw = row[col].value
             bucket = _bucket_for_cell(raw)
@@ -227,10 +255,11 @@ def _parse_customer_stories(ws) -> list[dict]:
             stories.append(
                 {
                     "customer": name,
-                    "food_category": category or "",
+                    "food_category": _normalize_story_category(category),
                     "dimension": dim,
                     "maturity_bucket": bucket,
-                    "url": url or "",
+                    "url": url_en or "",
+                    "url_es": url_es or url_en or "",
                 }
             )
     return stories
