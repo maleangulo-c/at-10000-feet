@@ -156,7 +156,7 @@ _ES_LOOKUP: dict[str, str] = {
         "Los proyectos se seleccionan según el ROI, casos de negocio e impacto estratégico.",
     "Digital governance": "Gobernanza digital",
     "Digital board with KPI tracking, value realization, benefits measurement and continuous portfolio review.":
-        "Tablero digital con seguimiento de KPI, realización de valor, medición de beneficios y revisión continua del portafolio.",
+        "Tablero digital con seguimiento de KPIs, realización de valor, medición de beneficios y revisión continua del portafolio.",
     "Quantify business impact and continuously optimize your transformation portfolio.":
         "Cuantifica el impacto de negocio y optimiza continuamente tu portafolio de transformación.",
 
@@ -170,7 +170,7 @@ _ES_LOOKUP: dict[str, str] = {
         "Los equipos colaboran eficazmente entre funciones usando herramientas digitales y procesos comunes.",
     "Leadership sponsorship": "Patrocinio del liderazgo",
     "Leaders actively promote and support transformation.":
-        "Los líderes promueven y respaldan activamente la transformación mediante mecanismos y programas establecidos.",
+        "Los líderes promueven y respaldan activamente la transformación digital mediante mecanismos y programas establecidos.",
     "Change management culture": "Cultura de gestión del cambio",
     "Change and digital adoption are embedded in the culture and continuously reinforced across the organization.":
         "El cambio y la adopción digital están integrados en la cultura y se refuerzan continuamente en toda la organización.",
@@ -193,12 +193,12 @@ _ES_LOOKUP: dict[str, str] = {
         "Replica las mejores prácticas en toda la organización y compara el desempeño externamente.",
 
     # Connectivity levels
-    "Know your installed base": "Conoce tu base instalada",
+    "Know your installed base": "Conoces tu base instalada",
     "Inventory and assessment of automation assets (PLC, HMI, drives, SCADA)\nIdentification of risks and unsupported systems\nModernization strategy defined":
-        "Inventario y evaluación de activos de automatización (PLC, HMI, variadores, SCADA)\nIdentificación de riesgos y sistemas sin soporte\nEstrategia de modernización definida",
+        "Existe un inventario y una evaluación de activos de automatización (PLC, HMI, variadores, SCADA)\nSe identifican los riesgos de los sistemas sin soporte\nExiste una estrategia de modernización definida",
     "Up-to-date automation and production control": "Automatización y control de producción actualizados",
     "One control room: equipment can communicate and are visible within the factory":
-        "Una sala de control: los equipos pueden comunicarse y son visibles dentro de la planta.",
+        "Existe una sala de control desde la cual los equipos pueden comunicarse y son visibles dentro de la planta.",
     "Connected assets and data collection": "Activos conectados y recolección de datos",
     "Operational data is automatically gathered from equipment and processes.":
         "Los datos operativos se recopilan automáticamente de los equipos y procesos.",
@@ -596,9 +596,9 @@ UI: dict[str, dict[str, str]] = {
         ),
         "savings_title": "#### Lo que han logrado empresas que ya alcanzaron el nivel mínimo viable",
         "savings_legend": (
-            "Estas cifras no se basan en tus respuestas específicas. Son ejemplos de "
+            "Estos porcentajes no se basan en tus respuestas. Son ejemplos de "
             "mejora reportados por la red Global Lighthouse Network del Foro "
-            "Económico Mundial, una vez que alcanzaron el nivel mínimo viable de "
+            "Económico Mundial, una vez que alcanzaron el nivel mínimo viable (MVS) de "
             "forma balanceada en las 5 dimensiones. Te muestran el tipo de impacto "
             "de negocio que suele generar avanzar de forma integral, no solo en un "
             "área."
