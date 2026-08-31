@@ -37,17 +37,12 @@ _DIMENSION_NAME_MAP = {
 }
 
 # Food categories offered on the participant form, mapped to the "Industry
-# Sub-Sector" label used in the "MVS potential savings" sheet. The form only
-# offers 4 categories (Dairy, Beverage, Prepared food, Other) — Cheese and
-# Ice Cream were removed as of the Tetra Pak MX dry-run feedback, so those
-# subsector rows are no longer referenced directly. "Prepared food" (canned/
-# preserved goods) has no dedicated subsector row in the workbook, so — like
-# "Other" — it falls back to the average across all rows (computed in
-# _average_savings_row below).
+# Sub-Sector" label used in the "MVS potential savings" sheet. "Other" has
+# no dedicated subsector row in the workbook and falls back to the average
+# across all rows (computed in _average_savings_row below).
 FOOD_CATEGORY_TO_SUBSECTOR = {
     "Dairy": "Dairy Beverage",
     "Beverage": "Beverages (Non-Dairy)",
-    "Prepared food": "__AVERAGE__",
     "Other": "__AVERAGE__",
 }
 
@@ -64,7 +59,7 @@ _STORY_CATEGORY_NORMALIZATION = {
     "juice": "Beverage",
     "plant-based": "Beverage",
     "liquid foods and beverages.": "Beverage",
-    "sauce producer": "Prepared food",
+    "sauce producer": "Other",
 }
 
 

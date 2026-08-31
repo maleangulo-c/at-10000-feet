@@ -36,13 +36,11 @@ FOOD_CATEGORY_NAMES: dict[str, dict[str, str]] = {
     "en": {
         "Dairy": "Dairy",
         "Beverage": "Beverage",
-        "Prepared food": "Prepared food",
         "Other": "Other",
     },
     "es": {
         "Dairy": "Lácteos",
-        "Beverage": "Bebidas (jugos, néctares y bebidas sin gas)",
-        "Prepared food": "Conservas",
+        "Beverage": "Bebidas: jugos, néctares y bebidas sin gas",
         "Other": "Otros",
     },
 }
@@ -198,16 +196,16 @@ _ES_LOOKUP: dict[str, str] = {
         "Existe un inventario y una evaluación de activos de automatización (PLC, HMI, variadores, SCADA)\nSe identifican los riesgos de los sistemas sin soporte\nExiste una estrategia de modernización definida",
     "Up-to-date automation and production control": "Automatización y control de producción actualizados",
     "One control room: equipment can communicate and are visible within the factory":
-        "Existe una sala de control desde la cual los equipos pueden comunicarse y son visibles dentro de la planta.",
+        "Existe una sala de control desde la cual los equipos pueden comunicarse y son visibles dentro de la planta de producción.",
     "Connected assets and data collection": "Activos conectados y recolección de datos",
     "Operational data is automatically gathered from equipment and processes.":
         "Los datos operativos se recopilan automáticamente de los equipos y procesos.",
     "OT/IT integration (Digital Bridge)": "Integración OT/IT (Digital Bridge)",
     "Shopfloor systems are connected with MES, ERP and business applications.":
         "Los sistemas de planta están conectados con MES, ERP y aplicaciones de negocio.",
-    "Secure Connected Factory": "Fábrica Conectada Segura",
+    "Secure Connected Factory": "Planta de Producción Conectada y Segura",
     "Factory systems and business applications are securely connected, with cybersecurity measures protecting operations, data and remote access.":
-        "Los sistemas de planta y las aplicaciones de negocio están conectados de forma segura, con medidas de ciberseguridad que protegen las operaciones, los datos y el acceso remoto.",
+        "Los sistemas de la planta de producción y las aplicaciones de negocio están conectados de forma segura, con medidas de ciberseguridad que protegen las operaciones, los datos y el acceso remoto.",
     "Leverage the connected enterprise to accelerate innovation and advanced analytics.":
         "Aprovecha la empresa conectada para acelerar la innovación y el análisis avanzado.",
 
@@ -233,7 +231,7 @@ _ES_LOOKUP: dict[str, str] = {
     "Identify obsolete assets and define a roadmap for modernization and risk reduction.":
         "Identifica activos obsoletos y define una hoja de ruta para su modernización y la reducción de riesgos.",
     "Understand where your factory stands against industry leaders and uncover the highest-value opportunities to accelerate your digital transformation.":
-        "Entiende en qué posición se encuentra tu planta frente a los líderes de la industria y descubre las oportunidades de mayor valor para acelerar tu transformación digital.",
+        "Entiende en qué posición se encuentra tu planta de producción frente a los líderes de la industria y descubre las oportunidades de mayor valor para acelerar tu transformación digital.",
     "Define the long-term operational and digital transformation journey":
         "Define el camino de transformación operativa y digital a largo plazo.",
     "Develop workforce competence through structured training and certification programs.":
@@ -259,9 +257,9 @@ _ES_LOOKUP: dict[str, str] = {
     "Extend equipment lifetime and unlock new digital capabilities through automation upgrades.":
         "Extiende la vida útil de los equipos y desbloquea nuevas capacidades digitales mediante actualizaciones de automatización.",
     "Collect and contextualize data from all factory assets in a secure, scalable foundation that accelerates digital transformation and data-driven decision-making":
-        "Recopila y contextualiza los datos de todos los activos de la planta en una base segura y escalable que acelera la transformación digital y la toma de decisiones basada en datos.",
+        "Recopila y contextualiza los datos de todos los activos de la planta de producción en una base segura y escalable que acelera la transformación digital y la toma de decisiones basada en datos.",
     "A unified control solution for food & beverage factories, combining PLC & user experience standards for consistent automation and optimised decision quality":
-        "Una solución de control unificada para plantas de alimentos y bebidas, que combina estándares de PLC y experiencia de usuario para una automatización consistente y decisiones de mayor calidad.",
+        "Una solución de control unificada para plantas de producción de alimentos y bebidas, que combina estándares de PLC y experiencia de usuario para una automatización consistente y decisiones de mayor calidad.",
     "Evaluate infrastructure risks and identify opportunities to improve reliability and security.":
         "Evalúa los riesgos de infraestructura e identifica oportunidades para mejorar la confiabilidad y la seguridad.",
     "Connect operational technology and business systems to create a seamless flow of data across the enterprise.":
@@ -281,9 +279,9 @@ _ES_LOOKUP: dict[str, str] = {
     "Replace paper-based production records with trusted digital data for faster decisions and complete traceability.":
         "Reemplaza los registros de producción en papel con datos digitales confiables para decisiones más rápidas y trazabilidad completa.",
     "An end-to-end production solution connecting your business to your factory, creating a manufacturing plan & executing it with efficiency":
-        "Una solución de producción integral que conecta tu negocio con tu planta, creando un plan de manufactura y ejecutándolo con eficiencia.",
+        "Una solución de producción integral que conecta tu negocio con tu planta de producción, creando un plan de manufactura y ejecutándolo con eficiencia.",
     "Ensure traceability and efficient execution of materials across production from wherever you are in the factory":
-        "Garantiza la trazabilidad y la ejecución eficiente de materiales en toda la producción desde cualquier punto de la planta.",
+        "Garantiza la trazabilidad y la ejecución eficiente de materiales en toda la producción desde cualquier punto de la planta de producción.",
     "Digitize quality processes and gain real-time insights to improve product quality and compliance.":
         "Digitaliza los procesos de calidad y obtén información en tiempo real para mejorar la calidad del producto y el cumplimiento.",
     "Optimize cleaning operations to reduce costs, improve sustainability and maximize production availability.":
@@ -291,7 +289,7 @@ _ES_LOOKUP: dict[str, str] = {
     "Consolidate quality data into actionable reports that improve compliance, product consistency and continuous improvement.":
         "Consolida los datos de calidad en reportes accionables que mejoran el cumplimiento, la consistencia del producto y la mejora continua.",
     "Provide contextualized factory data and insights to support faster and better decisions.":
-        "Proporciona datos e información contextualizada de la planta para apoyar decisiones más rápidas y mejores.",
+        "Proporciona datos e información contextualizada de la planta de producción para apoyar decisiones más rápidas y mejores.",
     "Integrated Real-Time Raw Material Reception Intelligence System for Food & Beverage Manufacturing":
         "Sistema inteligente integrado de recepción de materia prima en tiempo real para la manufactura de alimentos y bebidas.",
     "Optimize production plans and scheduling to maximize throughput and resource utilization.":
@@ -303,13 +301,13 @@ _ES_LOOKUP: dict[str, str] = {
 
     # Profiles (complementary text)
     "Your factory is in the foundational stage of its automation and digital transformation journey.":
-        "Tu planta está en la etapa fundacional de su transformación digital y de automatización.",
+        "Tu planta de producción está en la etapa fundacional de su transformación digital y de automatización.",
     "Your factory has established key digital capabilities and is ready to scale data-driven operations.":
-        "Tu planta ha establecido capacidades digitales clave y está lista para escalar operaciones basadas en datos.",
+        "Tu planta de producción ha establecido capacidades digitales clave y está lista para escalar operaciones basadas en datos.",
     "Your factory has a strong digital foundation and can focus on optimization and business value realization.":
-        "Tu planta tiene una base digital sólida y puede enfocarse en la optimización y la generación de valor de negocio.",
+        "Tu planta de producción tiene una base digital sólida y puede enfocarse en la optimización y la generación de valor de negocio.",
     "Your factory is positioned to accelerate innovation and advanced analytics.":
-        "Tu planta está posicionada para acelerar la innovación y el análisis avanzado.",
+        "Tu planta de producción está posicionada para acelerar la innovación y el análisis avanzado.",
 }
 
 # Tie-break order when two dimensions share the same score (highest wins the
@@ -372,7 +370,7 @@ SOLUTION_NAME_ES: dict[str, str] = {
     "KPI reports": "Reportes de KPI",
     "Energy Management": "Gestión de Energía",
     "Cheese Production Optimization": "Optimización de la Producción de Queso",
-    "Factory Agent": "Agente de Planta",
+    "Factory Agent": "Agente de Planta de Producción",
     "Digital Operational Report": "Reporte Operativo Digital",
     "CIP Performance Optimization": "Optimización del Desempeño de Limpieza CIP",
     "Smart Receiving": "Recepción Inteligente",
@@ -427,13 +425,14 @@ def translate_fw(lang: str, text: str) -> str:
 UI: dict[str, dict[str, str]] = {
     "en": {
         "title": "At 10,000 Feet: how ready are you to unlock the value of digital transformation?",
-        "intro1": (
-            "This self-assessment helps you understand your factory's readiness for "
-            "digital transformation. In just a few minutes, you will assess your "
-            "maturity across five key dimensions and receive a personalized view of "
-            "your current state, a comparison against the Industry Minimum Viable "
-            "Status (MVS), and recommended next steps."
+        "intro_subtitle": (
+            "This self-assessment helps you understand "
+            "**how ready your production plant is for digital transformation**."
         ),
+        "intro_lead": "In just a few minutes, you will assess your maturity across five key dimensions and receive:",
+        "intro_bullet1": "A personalized view of your current state.",
+        "intro_bullet2": "A comparison against the Industry Minimum Viable Status (MVS).",
+        "intro_bullet3": "Recommended next steps.",
         "pillars_prefix": "The five dimensions are: ",
         "step_answer": "Answer",
         "step_calculate": "Calculate",
@@ -448,10 +447,9 @@ UI: dict[str, dict[str, str]] = {
         "next": "Next →",
         "motivation_section_header": "Help us better understand your priorities.",
         "motivation_section_subheader": (
-            "These answers are optional and will not affect your assessment results. "
-            "**Optional Questions.**"
+            "These answers are optional and will not affect your assessment results."
         ),
-        "motivation_question": "Motivation: What business outcome are you hoping to achieve through digital transformation?",
+        "motivation_question": "What business outcome are you hoping to achieve through digital transformation?",
         "motivation_optional": "(optional)",
         "motivation_placeholder": "e.g. increase profitability",
         "investment_approach_question": "Investment approach: How does your organization currently prioritize automation and digital investments?",
@@ -464,12 +462,14 @@ UI: dict[str, dict[str, str]] = {
         "back": "← Back",
         "step_of": "Step {step} of {total}",
         "assessment_instruction": (
-            "Please select the maturity level that most closely matches your "
-            "company's overall status. Read all the options below and select "
-            "the single description that best reflects how your operation "
-            "actually works today — not how you'd like it to be. There are no "
-            "right or wrong answers; if none of the options apply, pick "
-            "\"Don't know / Skip.\""
+            "Instructions:  \n"
+            "1. Please, **select the maturity level that most closely matches your "
+            "company's overall status**.  \n\n"
+            "2. Read all the options below and **select the single description that "
+            "best reflects how your operation actually works TODAY** — not how "
+            "you'd like it to be.  \n\n"
+            "Keep in mind: **There are no right or wrong answers.** If none of the options "
+            "apply, pick \"Don't know / Skip.\""
         ),
         "dont_know": "I don't know / I don't want to rate this dimension",
         "level0_label": "Don't know / skip",
@@ -530,13 +530,14 @@ UI: dict[str, dict[str, str]] = {
     },
     "es": {
         "title": "A 10.000 Pies: ¿qué tan listo estás para desbloquear el valor de la transformación digital?",
-        "intro1": (
-            "Esta autoevaluación te ayuda a entender qué tan lista está tu planta para "
-            "la transformación digital. En solo unos minutos, evaluarás tu madurez en "
-            "cinco dimensiones clave y recibirás una vista personalizada de tu estado "
-            "actual, una comparación contra el Estado Mínimo Viable de la Industria "
-            "(MVS) y los siguientes pasos recomendados."
+        "intro_subtitle": (
+            "Esta autoevaluación te ayuda a entender "
+            "**qué tan lista está tu planta para la transformación digital**."
         ),
+        "intro_lead": "En solo unos minutos, evaluarás tu madurez en cinco dimensiones clave y recibirás:",
+        "intro_bullet1": "Una vista personalizada de tu estado actual.",
+        "intro_bullet2": "Una comparación contra el Estado Mínimo Viable de la Industria (MVS).",
+        "intro_bullet3": "Los siguientes pasos recomendados.",
         "pillars_prefix": "Las cinco dimensiones son: ",
         "step_answer": "Responder",
         "step_calculate": "Calcular",
@@ -552,9 +553,9 @@ UI: dict[str, dict[str, str]] = {
         "motivation_section_header": "Ayúdanos a entender mejor tus prioridades.",
         "motivation_section_subheader": (
             "Estas respuestas son opcionales y no afectarán los resultados de tu "
-            "evaluación. **Preguntas opcionales.**"
+            "evaluación."
         ),
-        "motivation_question": "Motivación: ¿Qué resultado de negocio esperas lograr a través de la transformación digital?",
+        "motivation_question": "¿Qué resultado de negocio esperas lograr a través de la transformación digital?",
         "motivation_optional": "(opcional)",
         "motivation_placeholder": "p. ej. incrementar la utilidad",
         "investment_approach_question": "Enfoque de inversión: ¿Cómo prioriza actualmente tu organización la automatización y las inversiones digitales?",
@@ -568,12 +569,14 @@ UI: dict[str, dict[str, str]] = {
         "back": "← Atrás",
         "step_of": "Paso {step} de {total}",
         "assessment_instruction": (
-            "Por favor selecciona el nivel de desarrollo que más se acerque al "
-            "estatus general de tu compañía. Lee todas las opciones a "
-            "continuación y selecciona la única descripción que mejor refleje "
-            "cómo funciona realmente tu operación hoy, no cómo te gustaría que "
-            "fuera. No hay respuestas correctas o incorrectas; si ninguna "
-            "opción aplica, elige \"No sé / Omitir\"."
+            "Instrucciones:  \n"
+            "1. Por favor, **selecciona el nivel de desarrollo que más se acerque al "
+            "estado general de tu compañía**.  \n\n"
+            "2. Lee todas las opciones a continuación y **selecciona la única "
+            "descripción que mejor refleje cómo funciona realmente tu operación "
+            "HOY**, no cómo te gustaría que fuera.  \n\n"
+            "Ten en cuenta: **No hay respuestas correctas o incorrectas.** Si ninguna opción "
+            "aplica, elige \"No sé / Omitir\"."
         ),
         "dont_know": "No sé / no quiero calificar esta dimensión",
         "level0_label": "No sé / omitir",

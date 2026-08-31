@@ -46,10 +46,7 @@ from translations import (
 
 DIMENSIONS: list[str] = dl.DIMENSIONS  # ["strategy", "people", "operations", "connectivity", "intelligence"]
 
-# As of the Tetra Pak MX dry-run feedback, "Cheese" and "Ice Cream" were
-# consolidated/removed — 4 categories now (see FOOD_CATEGORY_TO_SUBSECTOR /
-# FOOD_CATEGORY_NAMES for the corresponding MVS-savings and label updates).
-FOOD_CATEGORIES = ["Dairy", "Beverage", "Prepared food", "Other"]
+FOOD_CATEGORIES = ["Dairy", "Beverage", "Other"]
 
 
 # ===========================================================================
@@ -392,7 +389,20 @@ def render_language_switcher() -> None:
 def render_welcome() -> None:
     lang = st.session_state["lang"]
     st.title(t(lang, "title"))
-    st.markdown(t(lang, "intro1"))
+
+    st.markdown(
+        '<div style="margin-top:28px;"></div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(t(lang, "intro_subtitle"))
+    st.markdown("")
+    st.markdown(t(lang, "intro_lead"))
+    st.markdown(
+        f"- {t(lang, 'intro_bullet1')}\n"
+        f"- {t(lang, 'intro_bullet2')}\n"
+        f"- {t(lang, 'intro_bullet3')}"
+    )
 
     pillars_line = t(lang, "pillars_prefix") + " · ".join(
         f"**{DIMENSION_NAMES[lang][d]}**" for d in DIMENSIONS
