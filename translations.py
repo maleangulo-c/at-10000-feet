@@ -40,7 +40,7 @@ FOOD_CATEGORY_NAMES: dict[str, dict[str, str]] = {
     },
     "es": {
         "Dairy": "Lácteos",
-        "Beverage": "Bebidas: jugos, néctares y bebidas sin gas",
+        "Beverage": "Bebidas",
         "Other": "Otros",
     },
 }
