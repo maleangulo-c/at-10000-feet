@@ -202,7 +202,7 @@ _ES_LOOKUP: dict[str, str] = {
         "Los datos operativos se recopilan automáticamente de los equipos y procesos.",
     "OT/IT integration (Digital Bridge)": "Integración OT/IT (Digital Bridge)",
     "Shopfloor systems are connected with MES, ERP and business applications.":
-        "Los sistemas de planta están conectados con MES, ERP y aplicaciones de negocio.",
+        "Los sistemas de la planta de producción están conectados con MES, ERP y aplicaciones de negocio.",
     "Secure Connected Factory": "Planta de Producción Conectada y Segura",
     "Factory systems and business applications are securely connected, with cybersecurity measures protecting operations, data and remote access.":
         "Los sistemas de la planta de producción y las aplicaciones de negocio están conectados de forma segura, con medidas de ciberseguridad que protegen las operaciones, los datos y el acceso remoto.",
@@ -532,7 +532,7 @@ UI: dict[str, dict[str, str]] = {
         "title": "A 10.000 Pies: ¿qué tan listo estás para desbloquear el valor de la transformación digital?",
         "intro_subtitle": (
             "Esta autoevaluación te ayuda a entender "
-            "**qué tan lista está tu planta para la transformación digital**."
+            "**qué tan lista está tu planta de producción para la transformación digital**."
         ),
         "intro_lead": "En solo unos minutos, evaluarás tu madurez en cinco dimensiones clave y recibirás:",
         "intro_bullet1": "Una vista personalizada de tu estado actual.",
