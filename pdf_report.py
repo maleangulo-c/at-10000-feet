@@ -129,22 +129,22 @@ def _top_recommendations(answers: dict) -> list[dict]:
 
 
 def _solutions_for(framework: dict, dim: str, target_level: int, limit: int = 3) -> list[dict]:
-    """Same top-up logic as app.get_solutions_for_target, capped at `limit`
-    (3 here, vs. up to 5 on the results page) to keep the PDF's Next Steps
-    section to a single page."""
+    """Identical collection logic to app.get_solutions_for_target (collects
+    up to 5), then slices to `limit` so the PDF's first N solutions always
+    match the first N shown in the app."""
     solutions_bank = dl.load_workbook_data()["solutions_bank"]
     sols = list(framework[dim]["solutions"].get(target_level, []))
     seen_names = {s["name"] for s in sols}
 
-    if len(sols) < limit:
+    if len(sols) < 3:
         for name in FALLBACK_SOLUTIONS.get(dim, []):
             if name not in seen_names:
                 sols.append({"name": name, "vp": None})
                 seen_names.add(name)
-            if len(sols) >= limit:
+            if len(sols) >= 3:
                 break
 
-    if len(sols) < limit:
+    if len(sols) < 3:
         for lvl in sorted(framework[dim]["solutions"].keys()):
             if lvl == target_level:
                 continue
@@ -152,9 +152,9 @@ def _solutions_for(framework: dict, dim: str, target_level: int, limit: int = 3)
                 if s["name"] not in seen_names:
                     sols.append(s)
                     seen_names.add(s["name"])
-                if len(sols) >= limit:
+                if len(sols) >= 3:
                     break
-            if len(sols) >= limit:
+            if len(sols) >= 3:
                 break
 
     out = []
