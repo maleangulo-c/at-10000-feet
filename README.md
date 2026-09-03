@@ -1,12 +1,15 @@
-# At 10,000 Feet — Intelligent Automation Maturity Assessment
+# At 10,000 Feet — Digital Readiness Assessment
 
-A single-page **Streamlit** app for **Foro MX 2026** participants to self-diagnose
-their maturity in intelligent automation across **5 pillars** (18 questions). Users
-enter their info, answer the questionnaire, and see a results screen with a normalized
-radar chart, a per-pillar "equation" of scores, their overall level, and a personalized
-recommendations roadmap. Every submission is logged to Google Sheets for forum analytics.
+A single-page **Streamlit** app for **Foro MX 2026** participants to self-assess
+their digital-transformation maturity across **5 dimensions** — Strategy, People,
+Operations, Connectivity, and Intelligence. Users fill in their profile, answer one
+maturity question per dimension (levels 0–5), then see a results screen with a radar
+chart comparing their scores to an industry MVS (Minimum Viable Status) benchmark,
+a KPI improvement-potential table, prioritized "Next Steps" recommendations, customer
+success stories, and a downloadable PDF report. Every submission is logged to Google
+Sheets (or a local CSV fallback) for event analytics.
 
-The UI is entirely in **English**.
+The UI is fully bilingual (**English / Spanish**).
 
 ---
 
@@ -28,9 +31,10 @@ streamlit run app.py
 
 The app opens at <http://localhost:8501>.
 
-**Local-dev analytics fallback:** if Google Sheets secrets are not configured, every
-submission is appended to `./submissions_local.csv` and a warning is shown in the
-sidebar. No setup is required to try the app locally.
+**Local-dev analytics fallback:** if Google Sheets secrets are not configured
+(`.streamlit/secrets.toml` is missing), every submission is appended to
+`./submissions_local.csv` and a warning banner is shown in the sidebar. No setup is
+required to try the app locally.
 
 ---
 
@@ -91,37 +95,66 @@ Then edit `.streamlit/secrets.toml`:
 
 ---
 
-## 4. Scoring model (reference)
+## 4. Content & translations
 
-- 5 pillars, 18 questions, each scored **0–3**. Pillar maxes: `12 / 12 / 12 / 12 / 6`;
-  total max **54**.
-- **Radar** normalizes each pillar to `raw / pillar_max * 100` so the 2-question pillar
-  (Operational Control & CI) is comparable to the 4-question pillars.
-- **Overall level** (0–5) comes from the total score against the `LEVELS` table.
-- **Per-pillar level** uses proportional percentage cuts consistent with that table
-  (`get_pillar_level`).
+### Workbook as single source of truth
+
+`Digital_readiness_tool_Framework.xlsx` drives all content — per-dimension maturity
+levels and descriptions, the solutions catalog, MVS benchmark values, MVS-savings ranges
+per food-category sub-sector, and customer success stories. To change any content,
+**edit the workbook, not the code.** `data_loader.py` parses it once per process and
+caches the result.
+
+### Bilingual content
+
+Two mechanisms:
+
+| What | Where | How |
+|---|---|---|
+| Static UI strings (buttons, labels, headings) | `translations.py` → `UI[lang][key]` | Looked up via `t(lang, key)`. English and Spanish entries must be kept in sync manually. |
+| Workbook-sourced text (level names, dimension questions, solution value props) | `translations.py` → `_ES_LOOKUP` | `translate_fw(lang, text)` maps exact English strings to Spanish. A missing entry degrades to English rather than crashing. |
+
+---
+
+## 5. Assessment model (reference)
+
+- **5 dimensions**, 1 maturity question each, scored **0–5** (0 = not assessed /
+  excluded from results).
+- The **radar chart** plots each dimension's score alongside the industry MVS benchmark.
+- **Recommendations** pick the 3 lowest-scoring assessed dimensions, tie-broken by a
+  fixed business priority order (Strategy > Operations > Connectivity > People >
+  Intelligence). For each, up to 3 solutions are pulled from the workbook's catalog,
+  topped up from fallbacks if the exact level has fewer entries.
+- **Customer stories** are matched to the recommended dimensions by category and
+  maturity-bucket, deduped by customer name across dimensions.
+- The **PDF report** (built with `fpdf2`, no browser/Kaleido dependency) reproduces the
+  radar, KPI table, and recommendations with hand-drawn vector primitives.
 
 ### Analytics columns (in order)
 
 ```
-timestamp_iso, name, company, email, role,
-q_data_1..4, q_infra_1..4, q_invest_1..4, q_change_1..4, q_opctrl_1..2,
-data_raw, infra_raw, invest_raw, change_raw, opctrl_raw,
-data_level, infra_level, invest_level, change_level, opctrl_level,
-total, level_num, level_name
+timestamp_iso, share_data, name, company, email, food_category,
+motivation, investment_approach, language,
+strategy_level, people_level, operations_level,
+connectivity_level, intelligence_level, assessed_count
 ```
+
+If the participant declines to share data (`share_data=False`), PII fields (name,
+company, email, motivation, investment_approach) are blanked before writing — dimension
+scores are still recorded so aggregate stats stay complete.
 
 ---
 
-## 5. Notes / assumptions baked in
+## 6. Project structure
 
-- **0–3 scale labels:** 0 = Not implemented · 1 = Early/partial · 2 = Mostly in place ·
-  3 = Fully consolidated.
-- Sliders that default to 0 can't distinguish "answered 0" from "untouched", so the
-  questionnaire uses `st.radio` with no default selection — a question only counts as
-  answered once the user clicks a value.
-- FactoryOS **"partially"** actions are counted as accelerated (shown with an amber
-  `Partial` badge); **"yes"** shows a green `Full` badge.
-- "Remaining recommended actions" = the user's forward journey (current pillar level up
-  to Level 5), not already-achieved steps.
-- Internal `Source:` citations from the recommendations catalog are **not** displayed.
+```
+app.py                  Main Streamlit app (screen flow, rendering, analytics)
+data_loader.py          Parses the Excel workbook into dicts/lists
+translations.py         UI strings, dimension names/icons, ES translations
+pdf_report.py           PDF report generation (fpdf2)
+requirements.txt        Python dependencies
+Digital_readiness_tool_Framework.xlsx   Content workbook (source of truth)
+Casos de éxito MX.xlsx  Customer success stories (Mexico)
+fonts/                   Fonts for PDF generation
+.streamlit/             Streamlit config & secrets template
+```
