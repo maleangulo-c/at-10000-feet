@@ -525,7 +525,7 @@ UI: dict[str, dict[str, str]] = {
             "⚠️ Dev mode: Google Sheets not configured. "
             "Submissions are being written to `{csv}`."
         ),
-        "live_title": "🛫 Live results — At 10,000 Feet",
+        "live_title": "Live results — At 10,000 Feet",
         "live_count": "{count} submissions so far · refreshes automatically",
         "live_empty": "No submissions yet. This view refreshes automatically as people complete the assessment.",
     },
@@ -633,7 +633,7 @@ UI: dict[str, dict[str, str]] = {
             "⚠️ Modo desarrollo: Google Sheets no está configurado. "
             "Los envíos se están guardando en `{csv}`."
         ),
-        "live_title": "🛫 Resultados en vivo — A 10.000 Pies",
+        "live_title": "Resultados en vivo — A 10.000 Pies",
         "live_count": "{count} respuestas hasta ahora · se actualiza automáticamente",
         "live_empty": "Aún no hay respuestas. Esta vista se actualiza automáticamente conforme la gente completa la evaluación.",
     },

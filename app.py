@@ -682,12 +682,13 @@ def get_solutions_for_target(framework: dict, dim: str, target_level: int) -> li
 # ===========================================================================
 # RESULTS — TAB 1: Overview
 # ===========================================================================
-def render_radar(lang: str, answers: dict, framework: dict) -> None:
+def render_radar(lang: str, answers: dict, framework: dict, *, large: bool = False) -> None:
     """Pentagon spider chart: two outlined, dot-marker polygons — the MVS
     benchmark in red and the participant's current state in blue — matching
     the reference mockup's line-chart style (no filled wedges). Dimensions
     marked 0/not-assessed get a hollow gray marker on the current-state line
-    instead of a colored dot, since the polygon itself must stay closed."""
+    instead of a colored dot, since the polygon itself must stay closed.
+    Pass large=True for the projector/live view (bigger chart + labels)."""
     n = len(DIMENSIONS)
     centers = [i * 360 / n for i in range(n)]
 
@@ -703,13 +704,21 @@ def render_radar(lang: str, answers: dict, framework: dict) -> None:
     values_closed = values + [values[0]]
     marker_colors_closed = current_marker_colors + [current_marker_colors[0]]
 
+    label_size = 22 if large else 14
+    tick_size = 14 if large else 11
+    line_w = 4 if large else 3
+    marker_sz = 12 if large else 9
+    chart_h = 700 if large else 480
+    legend_font = 16 if large else 12
+    margin_lr = 120 if large else 80
+
     fig = go.Figure()
 
     fig.add_trace(
         go.Scatterpolar(
             r=mvs_closed, theta=theta_closed, mode="lines+markers",
-            line=dict(color=REFERENCE_RED, width=3),
-            marker=dict(color=REFERENCE_RED, size=9),
+            line=dict(color=REFERENCE_RED, width=line_w),
+            marker=dict(color=REFERENCE_RED, size=marker_sz),
             name=t(lang, "series_mvs"),
             customdata=[DIMENSION_NAMES[lang][d] for d in DIMENSIONS] + [DIMENSION_NAMES[lang][DIMENSIONS[0]]],
             hovertemplate="%{customdata} — " + t(lang, "series_mvs") + ": %{r}/5<extra></extra>",
@@ -718,8 +727,8 @@ def render_radar(lang: str, answers: dict, framework: dict) -> None:
     fig.add_trace(
         go.Scatterpolar(
             r=values_closed, theta=theta_closed, mode="lines+markers",
-            line=dict(color=PRIMARY, width=3),
-            marker=dict(color=marker_colors_closed, size=9),
+            line=dict(color=PRIMARY, width=line_w),
+            marker=dict(color=marker_colors_closed, size=marker_sz),
             name=t(lang, "series_current"),
             customdata=[DIMENSION_NAMES[lang][d] for d in DIMENSIONS] + [DIMENSION_NAMES[lang][DIMENSIONS[0]]],
             hovertemplate="%{customdata} — " + t(lang, "series_current") + ": %{r}/5<extra></extra>",
@@ -731,19 +740,19 @@ def render_radar(lang: str, answers: dict, framework: dict) -> None:
             radialaxis=dict(
                 range=[0, 5], tickvals=[1, 2, 3, 4, 5], showticklabels=True,
                 gridcolor=RADAR_TRACK_COLOR, linecolor=RADAR_TRACK_COLOR,
-                tickfont=dict(size=11, color="#666666"),
+                tickfont=dict(size=tick_size, color="#666666"),
             ),
             angularaxis=dict(
                 tickmode="array", tickvals=centers, ticktext=labels,
                 direction="clockwise", rotation=90, showgrid=True, gridcolor=RADAR_TRACK_COLOR,
-                linecolor=RADAR_TRACK_COLOR, tickfont=dict(size=14, color=NAVY_TEXT),
+                linecolor=RADAR_TRACK_COLOR, tickfont=dict(size=label_size, color=NAVY_TEXT),
             ),
             bgcolor="#FFFFFF",
         ),
         showlegend=True,
-        legend=dict(orientation="h", y=-0.1, x=0.2, font=dict(color=NAVY_TEXT)),
-        margin=dict(l=80, r=80, t=50, b=50),
-        height=480,
+        legend=dict(orientation="h", y=-0.1, x=0.2, font=dict(size=legend_font, color=NAVY_TEXT)),
+        margin=dict(l=margin_lr, r=margin_lr, t=50, b=50),
+        height=chart_h,
         paper_bgcolor="#FFFFFF",
     )
     st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
@@ -1017,17 +1026,11 @@ def render_live_results() -> None:
         st.caption(t(lang, "live_count", count=agg["count"]))
         framework = dl.load_workbook_data()["framework"]
         synthetic_answers = {d: agg["averages"][d] for d in DIMENSIONS}
-        render_radar(lang, synthetic_answers, framework)
-        st.info(f"**{t(lang, 'mvs_info_title')}** — {t(lang, 'mvs_info_body')}")
+        render_radar(lang, synthetic_answers, framework, large=True)
 
     _live_fragment()
 
-    st.markdown(
-        '<div style="position:fixed;bottom:16px;left:16px;z-index:1000;">'
-        '<img src="app/static/LogoTetra_SBB.png" style="height:60px;">'
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    st.image("static/LogoTetra_SBB.png", width=160)
 
 
 # ===========================================================================
