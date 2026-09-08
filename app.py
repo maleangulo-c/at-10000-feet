@@ -1016,36 +1016,6 @@ def render_results() -> None:
 def render_live_results() -> None:
     lang = st.session_state["lang"]
 
-    label_enter = t(lang, "live_fullscreen")
-    label_exit = t(lang, "live_exit_fullscreen")
-    st.markdown(
-        f"""
-        <button id="fs-btn" onclick="toggleFullScreen()" style="
-            position:fixed;top:12px;right:16px;z-index:9999;
-            background:#2D68F4;color:#fff;border:none;border-radius:6px;
-            padding:6px 14px;font-size:0.85rem;cursor:pointer;">
-            {label_enter}
-        </button>
-        <script>
-        function toggleFullScreen() {{
-            if (!document.fullscreenElement) {{
-                document.documentElement.requestFullscreen();
-            }} else {{
-                document.exitFullscreen();
-            }}
-        }}
-        document.addEventListener('fullscreenchange', function() {{
-            var btn = document.getElementById('fs-btn');
-            if (btn) {{
-                btn.textContent = document.fullscreenElement
-                    ? '{label_exit}' : '{label_enter}';
-            }}
-        }});
-        </script>
-        """,
-        unsafe_allow_html=True,
-    )
-
     @st.fragment(run_every="10s")
     def _live_fragment():
         agg = _compute_live_aggregate()
