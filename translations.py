@@ -28,7 +28,7 @@ DIMENSION_NAMES: dict[str, dict[str, str]] = {
         "people": "Personas",
         "operations": "Operaciones",
         "connectivity": "Conectividad",
-        "intelligence": "Inteligencia",
+        "intelligence": "Inteligencia de datos",
     },
 }
 
