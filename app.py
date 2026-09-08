@@ -708,9 +708,10 @@ def render_radar(lang: str, answers: dict, framework: dict, *, large: bool = Fal
     tick_size = 11
     line_w = 3
     marker_sz = 9
-    chart_h = 480
+    chart_h = 560 if large else 480
     legend_font = 15 if large else 12
-    margin_lr = 80
+    margin_lr = 100 if large else 80
+    margin_tb = 80 if large else 50
 
     fig = go.Figure()
 
@@ -750,8 +751,8 @@ def render_radar(lang: str, answers: dict, framework: dict, *, large: bool = Fal
             bgcolor="#FFFFFF",
         ),
         showlegend=True,
-        legend=dict(orientation="h", y=-0.1, x=0.2, font=dict(size=legend_font, color=NAVY_TEXT)),
-        margin=dict(l=margin_lr, r=margin_lr, t=50, b=50),
+        legend=dict(orientation="h", y=-0.1, x=0.5, xanchor="center", font=dict(size=legend_font, color=NAVY_TEXT)),
+        margin=dict(l=margin_lr, r=margin_lr, t=margin_tb, b=margin_tb),
         height=chart_h,
         paper_bgcolor="#FFFFFF",
     )
