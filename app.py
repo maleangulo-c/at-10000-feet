@@ -694,7 +694,8 @@ def render_radar(lang: str, answers: dict, framework: dict, *, large: bool = Fal
 
     values = [answers[d] for d in DIMENSIONS]
     mvs_values = [framework[d]["mvs"] for d in DIMENSIONS]
-    labels = [f"{DIMENSION_ICONS[d]}<br>{DIMENSION_NAMES[lang][d]}" for d in DIMENSIONS]
+    label_sep = "<br><br>" if large else "<br>"
+    labels = [f"{DIMENSION_ICONS[d]}{label_sep}{DIMENSION_NAMES[lang][d]}" for d in DIMENSIONS]
     not_assessed = [v == 0 for v in values]
     current_marker_colors = ["#B0B0B0" if na else PRIMARY for na in not_assessed]
 
@@ -1014,6 +1015,36 @@ def render_results() -> None:
 # ===========================================================================
 def render_live_results() -> None:
     lang = st.session_state["lang"]
+
+    label_enter = t(lang, "live_fullscreen")
+    label_exit = t(lang, "live_exit_fullscreen")
+    st.markdown(
+        f"""
+        <button id="fs-btn" onclick="toggleFullScreen()" style="
+            position:fixed;top:12px;right:16px;z-index:9999;
+            background:#2D68F4;color:#fff;border:none;border-radius:6px;
+            padding:6px 14px;font-size:0.85rem;cursor:pointer;">
+            {label_enter}
+        </button>
+        <script>
+        function toggleFullScreen() {{
+            if (!document.fullscreenElement) {{
+                document.documentElement.requestFullscreen();
+            }} else {{
+                document.exitFullscreen();
+            }}
+        }}
+        document.addEventListener('fullscreenchange', function() {{
+            var btn = document.getElementById('fs-btn');
+            if (btn) {{
+                btn.textContent = document.fullscreenElement
+                    ? '{label_exit}' : '{label_enter}';
+            }}
+        }});
+        </script>
+        """,
+        unsafe_allow_html=True,
+    )
 
     @st.fragment(run_every="10s")
     def _live_fragment():
