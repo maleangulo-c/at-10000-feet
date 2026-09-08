@@ -704,13 +704,13 @@ def render_radar(lang: str, answers: dict, framework: dict, *, large: bool = Fal
     values_closed = values + [values[0]]
     marker_colors_closed = current_marker_colors + [current_marker_colors[0]]
 
-    label_size = 22 if large else 14
-    tick_size = 14 if large else 11
-    line_w = 4 if large else 3
-    marker_sz = 12 if large else 9
-    chart_h = 700 if large else 480
-    legend_font = 16 if large else 12
-    margin_lr = 120 if large else 80
+    label_size = 20 if large else 14
+    tick_size = 11
+    line_w = 3
+    marker_sz = 9
+    chart_h = 480
+    legend_font = 15 if large else 12
+    margin_lr = 80
 
     fig = go.Figure()
 
@@ -1030,7 +1030,13 @@ def render_live_results() -> None:
 
     _live_fragment()
 
-    st.image("static/LogoTetra_SBB.png", width=160)
+    st.markdown(
+        '<div style="margin-top:8px;">'
+        '<img src="app/static/LogoTetra_SBB.png" style="height:60px;width:auto;'
+        'image-rendering:-webkit-optimize-contrast;">'
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 # ===========================================================================
