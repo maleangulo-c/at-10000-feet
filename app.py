@@ -694,8 +694,7 @@ def render_radar(lang: str, answers: dict, framework: dict, *, large: bool = Fal
 
     values = [answers[d] for d in DIMENSIONS]
     mvs_values = [framework[d]["mvs"] for d in DIMENSIONS]
-    label_sep = "<br><br>" if large else "<br>"
-    labels = [f"{DIMENSION_ICONS[d]}{label_sep}{DIMENSION_NAMES[lang][d]}" for d in DIMENSIONS]
+    labels = [f"{DIMENSION_ICONS[d]}<br>{DIMENSION_NAMES[lang][d]}" for d in DIMENSIONS]
     not_assessed = [v == 0 for v in values]
     current_marker_colors = ["#B0B0B0" if na else PRIMARY for na in not_assessed]
 
@@ -737,8 +736,10 @@ def render_radar(lang: str, answers: dict, framework: dict, *, large: bool = Fal
         )
     )
 
+    polar_domain = dict(x=[0.15, 0.85], y=[0.1, 0.9]) if large else {}
     fig.update_layout(
         polar=dict(
+            **polar_domain,
             radialaxis=dict(
                 range=[0, 5], tickvals=[1, 2, 3, 4, 5], showticklabels=True,
                 gridcolor=RADAR_TRACK_COLOR, linecolor=RADAR_TRACK_COLOR,
