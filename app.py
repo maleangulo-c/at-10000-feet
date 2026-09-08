@@ -1018,8 +1018,16 @@ def render_live_results() -> None:
         framework = dl.load_workbook_data()["framework"]
         synthetic_answers = {d: agg["averages"][d] for d in DIMENSIONS}
         render_radar(lang, synthetic_answers, framework)
+        st.info(f"**{t(lang, 'mvs_info_title')}** — {t(lang, 'mvs_info_body')}")
 
     _live_fragment()
+
+    st.markdown(
+        '<div style="position:fixed;bottom:16px;left:16px;z-index:1000;">'
+        '<img src="app/static/LogoTetra_SBB.png" style="height:60px;">'
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 # ===========================================================================

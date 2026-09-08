@@ -394,6 +394,7 @@ SOLUTION_NAME_ES: dict[str, str] = {
     "Remote and on-site support": "Soporte Remoto y en Sitio",
     "Asset Health monitoring": "Monitoreo de Salud de Activos",
     "Plant integration": "Integración de Planta",
+    "Plant modernisation": "Modernización de Planta",
     "Digital board": "Tablero Digital",
 }
 
