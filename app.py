@@ -736,10 +736,12 @@ def render_radar(lang: str, answers: dict, framework: dict, *, large: bool = Fal
         )
     )
 
-    polar_domain = dict(x=[0.15, 0.85], y=[0.1, 0.9]) if large else {}
+    polar_cfg: dict = {}
+    if large:
+        polar_cfg["domain"] = dict(x=[0.15, 0.85], y=[0.1, 0.9])
     fig.update_layout(
         polar=dict(
-            **polar_domain,
+            **polar_cfg,
             radialaxis=dict(
                 range=[0, 5], tickvals=[1, 2, 3, 4, 5], showticklabels=True,
                 gridcolor=RADAR_TRACK_COLOR, linecolor=RADAR_TRACK_COLOR,
